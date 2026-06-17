@@ -55,10 +55,28 @@ GLuint create_program(const char* vs_src, const char* fs_src)
     return prog;
 }
 
+Camera camera{};
+
+void update_MVP_n_send(GLuint mvp_location) {
+    glm::mat4 mvp = camera.update_MVP();
+
+    glUniformMatrix4fv(
+        mvp_location,
+        1,
+        GL_FALSE,
+        glm::value_ptr(mvp)
+    );
+}
+
+
 void framebuffer_size_callback(GLFWwindow*, int width, int height)
 {
+
     glViewport(0, 0, width, height);
+    camera.aspect = float(width) / float(height);
 }
+
+
 
 GLFWwindow* make_window()
 {
@@ -97,25 +115,106 @@ GLFWwindow* make_window()
     return window;
 }
 
-const char* vertex_shader = R"(
+
+#define KEY_FUNC_HLPR(key, func)                 \
+     (glfwGetKey(win, GLFW_KEY_##key) == GLFW_PRESS) { \
+        key_press = true;                        \
+        func;                                    \
+        cout << #key;                            \
+    }
+
+#define KEY_FUNC_ELSE_IF(key,func) else if KEY_FUNC_HLPR (key,func) 
+#define KEY_FUNC_IF(key,func) if KEY_FUNC_HLPR (key,func)
+
+bool process_input(GLFWwindow* win, Camera& cam)
+{
+    bool key_press = false;
+
+
+
+        KEY_FUNC_IF     (UP, cam.scale_inc(0.01f))
+        KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
+       // KEY_FUNC_ELSE_IF(LEFT, cam.shift_x_by(-0.1f))
+       // KEY_FUNC_ELSE_IF(RIGHT, cam.shift_x_by(0.1f))
+
+        KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
+        KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
+        KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
+        KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
+
+        KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.1f))
+        KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
+        
+        KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win,true))
+
+        return key_press;
+}
+
+
+# define CLEAR_SCREEN  std::cout << "\033[2J\033[1;1H"
+float gauss(float x, float y) {
+    float d = x*x + y*y;
+    return std::exp(-d);
+}
+
+
+constexpr int YSZ = 100;
+constexpr int XSZ = 100;
+
+static Surface<YSZ, XSZ> sur(0.f, 0.f, 1.0, 1.0);
+
+void update_arr() {
+    static float t = 0;
+    for (int i = 0; i < YSZ; i++) {
+        for (int j = 0; j < XSZ; j++) {
+            int indx = j + i * XSZ;
+            Vertex& coord_xy = sur.arr[indx];
+            coord_xy.Y = gauss(std::cos(5 * (t+coord_xy.X)), std::sin(5 * (t+coord_xy.Z)));
+            // cout << "[" << coord_xy.Z << "]";
+        }
+        //cout << "\n\n";
+    }
+    t += 0.001;
+}
+
+
+int main()
+
+{
+
+
+    const char* vertex_shader = R"(
 #version 330 core
 
 layout(location = 0) in vec3 coords;
+
 uniform mat4 MVP;
+uniform float t;
+uniform float f;
+
 out vec3 fragPos;
+
+float gauss(float x)
+{
+    return exp(-x);
+}
 
 void main()
 {
-    vec4 Pos;
-    Pos = MVP *vec4(coords,1.0);
-    fragPos = vec3(Pos.x,Pos.y,Pos.z);
+    vec3 pos = coords;
 
+    float dis = length(coords.xz);
+
+    pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
+
+    vec4 Pos = MVP * vec4(pos, 1.0);
+
+    fragPos = pos;
     gl_Position = Pos;
 }
-
 )";
 
-const char* fragment_shader = R"(
+    const char* fragment_shader = R"(
 #version 330 core
 
 in vec3 fragPos;
@@ -124,89 +223,17 @@ out vec4 FragColor;
 
 void main()
 {
-    FragColor = vec4(16 + (235-16-50)* (1-fragPos.z),
-                    30,
-                    16 + (235-16-50)* fragPos.z,
-                    0.7
-                    );
+   FragColor = vec4(fragPos.y,.2,1-fragPos.y,0.3);
+
 }
 )";
 
 
-bool process_input(GLFWwindow* win,Camera& cam) {
-   //camera translate : (up down left right) 
-   // surface rotate : W S D A
-   
-    bool key_press = false;
-
-    if (glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS) {
-        key_press = true;
-        cam.shift_x_by(0.001);
-        cout << "up\n";
-    }
-    else if (glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        key_press = true;
-        cam.shift_x_by(-0.001);
-        cout << "down\n";
-    }
-    else if (glfwGetKey(win, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        key_press = true;
-        cam.shift_y_by(0.001);
-        cout << "left\n";
-    }
-    else if (glfwGetKey(win, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        key_press = true;
-        cam.shift_y_by(-0.001);
-        cout << "right\n";
-    }
-    else if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS) {
-        key_press = true;
-        cam.rotate_x(0.5);
-        cout << "W\n";
-    }
-
-    else if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) {
-        key_press = true;
-        cam.rotate_x(-0.5);
-        cout << "S\n";
-    }
-    else if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) {
-        key_press = true;
-        cam.rotate_y(0.5);
-        cout << "A\n";
-    }
-    else if  (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) {
-        key_press = true;
-        cam.rotate_y(-0.5);
-        cout << "D\n";
-    }
-    
-    return key_press;
-}
-
-float gauss(float x, float y) {
-    double d = std::sqrt(x*x + y*y);
-    return std::exp(-d);
-}
-
-int main()
-{
+    mat_debug = true;
     GLFWwindow* window = make_window();
-    constexpr int YSZ = 100;
-    constexpr int XSZ = 100;
+  
     
-    static Surface<100,100> sur(0.f,0.f,0.5f,0.5f);
-
-
-
-    for (int i = 0; i < YSZ; i++) {
-        for (int j = 0; j < XSZ; j++) {
-            int indx = j + i * XSZ;
-            Vertex& coord_xy = sur.arr[indx];
-            coord_xy.Z = gauss(coord_xy.X,coord_xy.Y);
-        }
-    }
-
+   
     GLuint VAO;
     GLuint VBO;
     GLuint EBO;
@@ -245,43 +272,59 @@ int main()
     glEnableVertexAttribArray(0);
 
     GLuint program = create_program(vertex_shader, fragment_shader);
-    GLuint camLoc = glGetUniformLocation(program, "MVP");
-
-    Camera camera {};
     
+    // UNIFORMS
+    GLuint mvpLoc = glGetUniformLocation(program, "MVP");
+    GLuint t_Loc = glGetUniformLocation(program, "t");
+    GLuint f_Loc = glGetUniformLocation(program, "f");
+
+
+    glUseProgram(program);
+
+
+    float time = 0.0f; // Time 
+    float freq = 2 * PI; // freqency
+
+    update_MVP_n_send(mvpLoc);
+    
+    glUniform1f(f_Loc,freq);
+
+
     while (!glfwWindowShouldClose(window))
     {
-        glClearColor(0.08f, 0.08f, 0.08f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         bool inp = process_input(window,camera);
 
+        glUniform1f(t_Loc,time);
+        time += 0.001;
+
         glUseProgram(program);
+        
+        if (inp) {
+
+            if (mat_debug) CLEAR_SCREEN;
+            
+            update_MVP_n_send(mvpLoc);
+          
+            cout << "yaw: " << camera.yaw << "pitch: " << camera.pitch;
+            inp = false;
+        }
 
         glBindVertexArray(VAO);
 
         glDrawElements(
             GL_TRIANGLES,
-            sur.gl_ebo_sz(),
+            sur.gl_ebo_count(),
             GL_UNSIGNED_INT,
             (void*)(0)
         );
 
-
-        if (inp) {
-/*
-            glProgramUniformMatrix4fv(
-                program,
-                camLoc,
-                1,
-                GL_FALSE,
-                glm::value_ptr(camera.MVP_upload())
-            );*/
-        }
-
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
@@ -289,6 +332,6 @@ int main()
     glDeleteProgram(program);
 
     glfwTerminate();
-
+    
     return 0;
 }
