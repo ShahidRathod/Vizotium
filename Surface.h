@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <string.h>
 
 #define GLM_FORCE_RADIANS
 
@@ -106,6 +107,7 @@ struct Camera {
     float fov = 55.0f;
     float aspect = 1280.0f / 720.0f;
 
+  
     glm::mat4 mvp = glm::mat4(1.0f);
 
     Camera() {
@@ -135,6 +137,7 @@ struct Camera {
         pitch += y;
        limit_angle(pitch,0,180);
     }
+
 
     void scale_inc(float s) { scale += s; }
     inline float give_scale() { return std::exp(scale); }
@@ -222,8 +225,9 @@ public:
 
                 Ebo_sqre& sqre = ebo_arr[indx];
 
-                /// ebo array is mappings to arr which has stride x_sz
+                // ebo array is mappings to arr which has stride x_sz
                 int ebo_indx = j + i * x_sz;
+                
                 sqre = Ebo_sqre{
                     {ebo_indx, ebo_indx + 1, ebo_indx + x_sz},
                     {ebo_indx + 1, ebo_indx + x_sz, ebo_indx + 1 + x_sz}
@@ -306,6 +310,64 @@ inline float fn(float a, float b) {
     return std::sin(a * b);
 }
 
+void bind_n_declare_vertexpointer(GLuint vaoid) {
+
+    glBindVertexArray(vaoid);
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        3 * sizeof(float),
+        nullptr
+    );
+}
+
+template <int x_sz, int y_sz>
+struct GLSurfaceHandel{
+    GLuint VBO, VAO, EBO;
+    Surface<x_sz, y_sz>* surPtr;
+    
+    GLSurfaceHandel(Surface <x_sz,y_sz>* sur){
+        surPtr = sur;
+
+        glGenBuffers(1, &VBO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, buffer(VBO));
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            sur->gl_vbo_sz(),
+            sur->gl_arr(),
+            GL_DYNAMIC_DRAW
+        );
+
+
+        bind_n_declare_vertexpointer(VAO);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            sur->gl_ebo_sz(),
+            sur->gl_ebo_arr(),
+            GL_DYNAMIC_DRAW
+        );
+        void draw() {
+            glBindVertexArray(VAO);
+            glUniform1i(is_gridLoc, false);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glDrawElements(
+                GL_TRIANGLES,
+                sur.gl_ebo_count(),
+                GL_UNSIGNED_INT,
+                (void*)(0)
+            );
+        }
+
+    }
+    
+};
+
 // each grid cell contains the nth x line and nth y line 
 
 template <int len>
@@ -314,33 +376,97 @@ struct GridCell{
     Ebo_sqre ebo[len];
 };
 
-template <int x_sz,int y_sz,int line_intervl,int line_width>
+template <int line_intervl,int line_width, int x_sz, int y_sz >
 struct Grid {
 
     // note the number of square in a surface<x_sz y_sz> is (x_sz-1)*(y_sz-1);
     glm::vec4 rgba ;
 
-    constexpr int x_grid_len = (x_sz -1) / line_intervl;
-    constexpr int y_grid_len = (y_sz -1) / line_intervl;
+    static constexpr int x_grid_len = (x_sz - 1) / line_intervl;
+    static constexpr int y_grid_len = (y_sz - 1) / line_intervl;
 
     GridCell<y_sz> x_lines[x_grid_len];
     GridCell<y_grid_len> y_lines[x_sz];
+    
+    GLuint VAO, EBO,surface_VBO;
 
-    Grid(Surface<x_sz,y_sz> sur,glm::vec4 clr) {
+    void init_vao() {
+        glGenBuffers(1,VAO);
+        glBi()
+    }
+    void init_ebo() {
+        glGenBuffers(1, EBO);
+    }
+
+    Grid(GLuint sur_VBO, Ebo_sqre ebo_arr, glm::vec4 clr) {
         rgba = clr;
-        GridCell<x_sz>* grid_ptr= (GridCell*)(sur.ebo_arr);
-        
+        surface_VBO = sur_VBO;
+
+        GridCell<x_sz>* grid_ptr = (GridCell<x_sz>*)(ebo_arr);
+
         for (int i = 0; i < x_grid_len;i++) {
-            x_lines[i].ebo = grid_ptr[i * line_intervl];
+            //  x_lines[i].ebo = grid_ptr[i * line_intervl];
+            Ebo_sqre* ith_line = x_lines[i].ebo;
+            memcpy(ith_line, &grid_ptr[i * line_intervl], sizeof(Ebo_sqre) * y_sz);
         }
 
-        for (int i = 0; i < x_sz; i++)
-        {
-            for (int k = 0; k < grid_len; k++)
-            {
-                (y_lines[i].ebo)[k] = grid_ptr[i].ebo[k * line_intervl];
+        bind_n_declare_vertexpointer(VAO);
 
-            }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            gl_ebo_sz(),
+            gl_ebo_arr(),
+            GL_DYNAMIC_DRAW
+        );
+
+
+        /* for (int i = 0; i < x_sz; i++)
+         {
+             for (int k = 0; k < y_grid_len; k++)
+             {
+                 (y_lines[i].ebo)[k] = grid_ptr[i].ebo[k * line_intervl];
+
+             }
+         }*/
+    }
+        void draw() {
+            
+            glUniform4fv(grid_clrLoc, 1, glm::value_ptr(rgba));
+            glUniform1i(is_gridLoc, true);
+
+            glBindVertexArray(VAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glDrawElements(
+                GL_TRIANGLES,
+                gl_ebo_count(),
+                GL_UNSIGNED_INT,
+                (void*)(0)
+            );
         }
+        
+        
+    
+
+    int* gl_ebo_arr() { return reinterpret_cast<int*> (x_lines); }
+    int gl_ebo_sz() { return sizeof(x_lines)+sizeof(y_lines); }
+    int gl_ebo_count() {return 6*gl_ebo_sz() / sizeof(Ebo_sqre); }
+
+
+};
+
+template <int line_intervl, int line_width, int x_sz, int y_sz >
+struct SurfaceGrid {
+    Grid <line /5 , line_width*3,x_sz,y_sz> major_grid;
+    Grid <line, line_width, x_sz, y_sz>        minor_grid;
+
+    SurfaceGrid(Surface<x_sz, y_sz> sur) {
+        major_grid {sur.gl_ebo_arr()};
+        minor_grid {sur.gl_ebo_arr()};
+    }
+
+    void draw() {
+        major_grid.draw();
+        minor_grid.draw();
     }
 };

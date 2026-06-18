@@ -158,10 +158,13 @@ float gauss(float x, float y) {
 }
 
 
-constexpr int YSZ = 100;
-constexpr int XSZ = 100;
+constexpr int YSZ = 200;
+constexpr int XSZ = 200;
 
-static Surface<YSZ, XSZ> sur(0.f, 0.f, 1.0, 1.0);
+static Surface<XSZ, YSZ> sur(0.f, 0.f, 1.0, 1.0);
+
+static GLSurfaceHandel<XSZ, YSZ> gl_surface{&sur};
+static SurfaceGrid <20, 3, XSZ, YSZ> gl_grid{}
 
 void update_arr() {
     static float t = 0;
@@ -178,10 +181,36 @@ void update_arr() {
 }
 
 
+enum class BufferIds : int {
+
+    EBO,VBO ,EBO_major_grid, EBO_minor_grid
+};
+
+enum class VertexIds : int {
+    VAO, major_grid, minor_grid
+};
+
+
+
+#define buffer(name) buffer_ids [(int)BufferIds::name]
+#define vertex(name) vertex_ids [(int)VertexIds::name]
+
 int main()
 
 {
+    /*const char* grid_shader = R"(
 
+#version 330 core
+in vec3 fragPos;
+out vec4 FragColor;
+
+void main()
+{
+   FragColor = vec4(fragPos.y,.2,1-fragPos.y,1);
+
+}
+)";
+*/
 
     const char* vertex_shader = R"(
 #version 330 core
@@ -205,7 +234,7 @@ void main()
 
     float dis = length(coords.xz);
 
-    pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
+    //pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
 
     vec4 Pos = MVP * vec4(pos, 1.0);
 
@@ -218,13 +247,18 @@ void main()
 #version 330 core
 
 in vec3 fragPos;
-
 out vec4 FragColor;
+
+uniform bool is_grid;
+uniform vec4 grid_clr;
 
 void main()
 {
-   FragColor = vec4(fragPos.y,.2,1-fragPos.y,0.3);
-
+   if (!is_grid){
+   FragColor = vec4(fragPos.y,.2,1-fragPos.y,1);
+   }else {
+    FragColor = grid_clr;
+    }
 }
 )";
 
@@ -232,44 +266,20 @@ void main()
     mat_debug = true;
     GLFWwindow* window = make_window();
   
-    
    
-    GLuint VAO;
-    GLuint VBO;
-    GLuint EBO;
+   
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        sur.gl_vbo_sz(),
-        sur.gl_arr(),
-        GL_STATIC_DRAW
-    );
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+ 
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer(EBO));
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
         sur.gl_ebo_sz(),
         sur.gl_ebo_arr(),
-        GL_STATIC_DRAW
+        GL_DYNAMIC_DRAW
     );
 
-    glVertexAttribPointer(
-        0,
-        3,
-        GL_FLOAT,
-        GL_FALSE,
-        3 * sizeof(float),
-        nullptr
-    );
-
-    glEnableVertexAttribArray(0);
+   
 
     GLuint program = create_program(vertex_shader, fragment_shader);
     
@@ -278,18 +288,21 @@ void main()
     GLuint t_Loc = glGetUniformLocation(program, "t");
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
+    GLuint is_gridLoc = glGetUniformLocation(program, "is_grid");
+    GLuint grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
+    glUniform1i(is_gridLoc, false);
     glUseProgram(program);
-
 
     float time = 0.0f; // Time 
     float freq = 2 * PI; // freqency
 
+
     update_MVP_n_send(mvpLoc);
-    
+
     glUniform1f(f_Loc,freq);
 
-
+    
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
@@ -305,30 +318,22 @@ void main()
         if (inp) {
 
             if (mat_debug) CLEAR_SCREEN;
-            
             update_MVP_n_send(mvpLoc);
           
             cout << "yaw: " << camera.yaw << "pitch: " << camera.pitch;
             inp = false;
         }
-
-        glBindVertexArray(VAO);
-
-        glDrawElements(
-            GL_TRIANGLES,
-            sur.gl_ebo_count(),
-            GL_UNSIGNED_INT,
-            (void*)(0)
-        );
-
+        
+        gl_surface.draw();
+        
         glfwSwapBuffers(window);
+        
         glfwPollEvents();
     }
     
 
     glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(buffer_len, buffer_ids);
     glDeleteProgram(program);
 
     glfwTerminate();
