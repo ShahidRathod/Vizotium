@@ -165,6 +165,7 @@ constexpr int XSZ = 200;
 
 static Surface<XSZ, YSZ> sur(0.f, 0.f, 1.0, 1.0);
 
+/*
 void update_arr() {
     static float t = 0;
     for (int i = 0; i < YSZ; i++) {
@@ -179,6 +180,7 @@ void update_arr() {
     t += 0.001;
 }
 
+*/
 
 enum class BufferIds : int {
 
@@ -236,8 +238,8 @@ void main()
 
     float dis = length(coords.xz);
 
-    pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
-
+    
+    pos.y = gauss(dis) * cos(f * dis - t);
     vec4 Pos = MVP * vec4(pos, 1.0);
 
     fragPos = pos;
@@ -257,7 +259,7 @@ uniform vec4 grid_clr;
 void main()
 {
    if (!is_grid){
-   FragColor = vec4(fragPos.y,.2,1-fragPos.y,1);
+   FragColor = vec4(1-.5*exp(fragPos.y),.2,fragPos.y,1);
    }else {
     FragColor = grid_clr;
     }
@@ -280,7 +282,7 @@ void main()
     GLuint is_gridLoc = glGetUniformLocation(program, "is_grid");
     GLuint grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
-   
+    
     glUseProgram(program);
 
     float time = 0.0f; // Time 
@@ -292,7 +294,8 @@ void main()
     glUniform1f(f_Loc,freq);
 
     static GLSurfaceHandel<XSZ, YSZ> gl_surface{ &sur };
-    static SurfaceGrid <20, 3, XSZ, YSZ> gl_grid{ gl_surface };
+    static SurfaceGrid <XSZ/10, 1, XSZ, YSZ> gl_grid{ gl_surface };
+    
 
     glUseProgram(program);
 
@@ -304,7 +307,7 @@ void main()
         bool inp = process_input(window,camera);
 
         glUniform1f(t_Loc,time);
-        time += 0.001;
+        time += 0.01;
 
       
         
@@ -317,8 +320,8 @@ void main()
             inp = false;
         }
         
-        gl_surface.draw();
-       // gl_grid.draw();
+        //gl_surface.draw();
+        gl_grid.draw();
 
         glfwSwapBuffers(window);
         

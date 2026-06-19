@@ -313,16 +313,27 @@ inline float fn(float a, float b) {
     return std::sin(a * b);
 }
 
-inline void coords_vao_setup(GLuint& vboid,GLuint& eboid,GLuint& vaoid,float* vbo_arr,int vbo_sz,int* ebo_arr,int ebo_sz) {
-    
-    glGenBuffers(1,&vboid);
+template <bool shared_vbo>
+inline void coords_vao_setup
+(GLuint& vboid, GLuint& eboid, GLuint& vaoid,  int* ebo_arr, int ebo_sz , float* vbo_arr = nullptr, int vbo_sz=0) {
+
+    if constexpr (!shared_vbo) {
+        glGenBuffers(1, &vboid);
+    }
+
     glGenBuffers(1, &eboid);
     glGenVertexArrays(1,&vaoid);
+
+    glBindVertexArray(vaoid);
+
     glBindBuffer(GL_ARRAY_BUFFER,vboid);
+    if constexpr (!shared_vbo) {
+        glBufferData(GL_ARRAY_BUFFER, vbo_sz, vbo_arr,GL_STATIC_DRAW);
+    }
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboid);
-    
-    glBindVertexArray(vaoid);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebo_sz,ebo_arr,GL_STATIC_DRAW);
+
     glVertexAttribPointer(
         0,
         3,
@@ -331,20 +342,8 @@ inline void coords_vao_setup(GLuint& vboid,GLuint& eboid,GLuint& vaoid,float* vb
         3 * sizeof(float),
         nullptr
     );
-
+    glEnableVertexAttribArray(0);
 }
-
-struct VboPack {
-    GLuint vbo_id;
-    float* vbo_arr;
-    int vbo_sz;
-};
-
-struct EboPack{
-    GLuint vbo_id;
-    float* vbo_arr;
-    int vbo_sz;
-};
 
 template <int x_sz, int y_sz>
 struct GLSurfaceHandel {
@@ -353,36 +352,13 @@ struct GLSurfaceHandel {
 
     GLSurfaceHandel(Surface <x_sz, y_sz>* sur) {
         surPtr = sur;
-
-        glGenBuffers(1, &VBO);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        
-        glBufferData(
-            GL_ARRAY_BUFFER,
-            sur->gl_vbo_sz(),
-            sur->gl_arr(),
-            GL_DYNAMIC_DRAW
-        );
-
-
-        bind_n_declare_vertexpointer(VAO);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER,
-            surPtr->gl_ebo_sz(),
-            surPtr->gl_ebo_arr(),
-            GL_DYNAMIC_DRAW
-        );
+        coords_vao_setup<false>(VBO,EBO,VAO, surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz(), surPtr->gl_arr(), surPtr->gl_vbo_sz());
+      
     }
-
 
     void draw() {
         
         glBindVertexArray(VAO);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
         glUniform1i(is_gridLoc, false);
  
         glDrawElements(
@@ -414,44 +390,41 @@ struct Grid {
 
     static constexpr int x_grid_len = (x_sz - 1) / line_intervl;
     static constexpr int y_grid_len = (y_sz - 1) / line_intervl;
+    static constexpr int ebo_stride = x_sz - 1;
     glm::vec4 rgba;
 
-    GridCell<y_sz> x_lines[x_grid_len];
-    GridCell<y_grid_len> y_lines[x_sz];
+    GridCell<ebo_stride> x_lines[x_grid_len];
+    GridCell<y_grid_len> y_lines[ebo_stride];
     
-    GLuint VAO, EBO,surface_VBO;
+    GLuint VBO,VAO, EBO;
 
     Grid() {}
 
     Grid(GLuint sur_VBO, int *ebo_arr, glm::vec4 clr) {
         rgba = clr;
-        surface_VBO = sur_VBO;
+        VBO = sur_VBO;
 
-        GridCell<x_sz>* grid_ptr = (GridCell<x_sz>*)(ebo_arr);
+        GridCell<ebo_stride>* grid_ptr = (GridCell<ebo_stride>*)(ebo_arr);
 
-        for (int i = 0; i < x_grid_len;i++) {
+       // GridCell<x_sz-1>* grid_ptr2 = (GridCell<x_sz-1>*)(ebo_arr);
+       
+         for (int i = 0; i < x_grid_len;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
             Ebo_sqre* ith_line = x_lines[i].ebo;
-            memcpy(ith_line, &grid_ptr[i * line_intervl], sizeof(Ebo_sqre) * y_sz);
+            memcpy(ith_line, &grid_ptr[(i+1) * line_intervl], sizeof(Ebo_sqre) * y_sz);
         }
-
-         for (int i = 0; i < x_sz; i++){
+       
+        for (int i = 0; i < x_sz; i++) {
              for (int k = 0; k < y_grid_len; k++)
              {
-                 (y_lines[i].ebo)[k] = grid_ptr[i].ebo[k * line_intervl];
+                 y_lines[i].ebo[k] = grid_ptr[i].ebo[(k+1) * line_intervl];
 
              }
          }
 
-         bind_n_declare_vertexpointer(VAO);
 
-         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-         glBufferData(
-             GL_ELEMENT_ARRAY_BUFFER,
-             gl_ebo_sz(),
-             gl_ebo_arr(),
-             GL_DYNAMIC_DRAW
-         );
+         coords_vao_setup<true>
+             (VBO, VAO, EBO, gl_ebo_arr(), gl_ebo_sz());
     }
     
     void draw() {
@@ -460,7 +433,6 @@ struct Grid {
         glUniform1i(is_gridLoc, true);
 
         glBindVertexArray(VAO);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glDrawElements(
             GL_TRIANGLES,
             gl_ebo_count(),
