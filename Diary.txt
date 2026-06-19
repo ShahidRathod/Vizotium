@@ -1,0 +1,19 @@
+Grid scaling plan - currently the grid square is of same size as that of the surface square. so there is a lower limit to size of the grid lines. this can be solved by rendering a smaller grid in the a tile of surface. by this we can make arbitaraly small/fine grids in surface . can we further implemented in the adaptive coordinates where the x-y coordinates grid density is proportional to gradient at that point (x,y) [DO NOT START IMPLIMETING THIS IN PROJECT WE FOR NOW DONT NEED ADAPTIVE COORDINATES]. I surely want to make the grid coordinates of a general plane with a vertex shader 
+
+
+
+	(s1)--------------(s1)
+	  \        \        \       
+	   \ 	    \	     \
+	    \ 	     \	      \
+	     \        \        \
+	      \-----------------\        
+	       \        \        \
+	        \ 	 \	  \
+	    	 \ 	  \        \
+	     	  \	   \        \
+	         (s2)--------------(s2)
+
+
+
+
