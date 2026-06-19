@@ -224,6 +224,7 @@ layout(location = 0) in vec3 coords;
 uniform mat4 MVP;
 uniform float t;
 uniform float f;
+uniform bool is_grid;
 
 out vec3 fragPos;
 
@@ -235,7 +236,7 @@ float gauss(float x)
 void main()
 {
     vec3 pos = coords;
-
+    
     float dis = length(coords.xz);
 
     
@@ -243,6 +244,9 @@ void main()
     vec4 Pos = MVP * vec4(pos, 1.0);
 
     fragPos = pos;
+    if (is_grid) {
+        Pos.y += 0.001;
+    }
     gl_Position = Pos;
 }
 )";
@@ -258,10 +262,13 @@ uniform vec4 grid_clr;
 
 void main()
 {
-   if (!is_grid){
-   FragColor = vec4(1-.5*exp(fragPos.y),.2,fragPos.y,1);
+   if (is_grid){
+     FragColor = grid_clr;
+    
    }else {
-    FragColor = grid_clr;
+     float h = fragPos.y;
+     FragColor = vec4(h+h*h + h*h*h,.2, 1-.5*exp(h),1);
+ 
     }
 }
 )";
@@ -279,8 +286,8 @@ void main()
     GLuint t_Loc = glGetUniformLocation(program, "t");
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
-    GLuint is_gridLoc = glGetUniformLocation(program, "is_grid");
-    GLuint grid_clrLoc = glGetUniformLocation(program, "grid_clr");
+    is_gridLoc = glGetUniformLocation(program, "is_grid");
+    grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
     
     glUseProgram(program);
@@ -294,11 +301,11 @@ void main()
     glUniform1f(f_Loc,freq);
 
     static GLSurfaceHandel<XSZ, YSZ> gl_surface{ &sur };
-    static SurfaceGrid <XSZ/10, 1, XSZ, YSZ> gl_grid{ gl_surface };
+    static SurfaceGrid <XSZ/10, 2, XSZ, YSZ> gl_grid{ gl_surface };
     
 
     glUseProgram(program);
-
+    glEnable(GL_DEPTH_TEST);
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
@@ -306,7 +313,7 @@ void main()
         
         bool inp = process_input(window,camera);
 
-        glUniform1f(t_Loc,time);
+        glUniform1f(t_Loc, time);
         time += 0.01;
 
       
@@ -319,9 +326,10 @@ void main()
             cout << "yaw: " << camera.yaw << "pitch: " << camera.pitch;
             inp = false;
         }
-        
-        //gl_surface.draw();
+
+        gl_surface.draw();
         gl_grid.draw();
+
 
         glfwSwapBuffers(window);
         

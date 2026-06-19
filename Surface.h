@@ -406,8 +406,6 @@ struct Grid {
 
         GridCell<ebo_stride>* grid_ptr = (GridCell<ebo_stride>*)(ebo_arr);
 
-       // GridCell<x_sz-1>* grid_ptr2 = (GridCell<x_sz-1>*)(ebo_arr);
-       
          for (int i = 0; i < x_grid_len;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
             Ebo_sqre* ith_line = x_lines[i].ebo;
@@ -421,7 +419,6 @@ struct Grid {
 
              }
          }
-
 
          coords_vao_setup<true>
              (VBO, VAO, EBO, gl_ebo_arr(), gl_ebo_sz());
@@ -440,7 +437,6 @@ struct Grid {
             (void*)(0)
         );
     }
-          
 
     int* gl_ebo_arr() { return reinterpret_cast<int*> (x_lines); }
     int gl_ebo_sz() { return sizeof(x_lines)+sizeof(y_lines); }
@@ -462,11 +458,11 @@ struct SurfaceGrid {
 
         major_grid = MajorGridT(sur_handel.VBO, 
                                 sur_handel.surPtr->gl_ebo_arr(),
-                                glm::vec4(.75,.75,.75,1)  );
+                                glm::vec4(1)  );
 
         minor_grid = MinorGridT( sur_handel.VBO,
                                  sur_handel.surPtr->gl_ebo_arr(),
-                                 glm::vec4(.75,.75,.75,1) );
+                                 glm::vec4(1) );
     }
 
     void draw() {
