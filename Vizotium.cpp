@@ -9,6 +9,8 @@
 using std::cerr;
 using std::cout;
 
+extern 
+
 GLuint compile_shader(GLenum type, const char* src)
 {
     GLuint shader = glCreateShader(type);
@@ -163,9 +165,6 @@ constexpr int XSZ = 200;
 
 static Surface<XSZ, YSZ> sur(0.f, 0.f, 1.0, 1.0);
 
-static GLSurfaceHandel<XSZ, YSZ> gl_surface{&sur};
-static SurfaceGrid <20, 3, XSZ, YSZ> gl_grid{}
-
 void update_arr() {
     static float t = 0;
     for (int i = 0; i < YSZ; i++) {
@@ -194,6 +193,9 @@ enum class VertexIds : int {
 
 #define buffer(name) buffer_ids [(int)BufferIds::name]
 #define vertex(name) vertex_ids [(int)VertexIds::name]
+
+GLuint is_gridLoc;
+GLuint grid_clrLoc;
 
 int main()
 
@@ -234,7 +236,7 @@ void main()
 
     float dis = length(coords.xz);
 
-    //pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
+    pos.y = gauss(cos(f*(t+dis)) *dis ) /(1+dis) ;
 
     vec4 Pos = MVP * vec4(pos, 1.0);
 
@@ -266,24 +268,11 @@ void main()
     mat_debug = true;
     GLFWwindow* window = make_window();
   
-   
-   
-
- 
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer(EBO));
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        sur.gl_ebo_sz(),
-        sur.gl_ebo_arr(),
-        GL_DYNAMIC_DRAW
-    );
-
-   
 
     GLuint program = create_program(vertex_shader, fragment_shader);
     
     // UNIFORMS
+    
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
     GLuint t_Loc = glGetUniformLocation(program, "t");
     GLuint f_Loc = glGetUniformLocation(program, "f");
@@ -291,7 +280,7 @@ void main()
     GLuint is_gridLoc = glGetUniformLocation(program, "is_grid");
     GLuint grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
-    glUniform1i(is_gridLoc, false);
+   
     glUseProgram(program);
 
     float time = 0.0f; // Time 
@@ -302,7 +291,11 @@ void main()
 
     glUniform1f(f_Loc,freq);
 
-    
+    static GLSurfaceHandel<XSZ, YSZ> gl_surface{ &sur };
+    static SurfaceGrid <20, 3, XSZ, YSZ> gl_grid{ gl_surface };
+
+    glUseProgram(program);
+
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
@@ -313,7 +306,7 @@ void main()
         glUniform1f(t_Loc,time);
         time += 0.001;
 
-        glUseProgram(program);
+      
         
         if (inp) {
 
@@ -325,15 +318,13 @@ void main()
         }
         
         gl_surface.draw();
-        
+       // gl_grid.draw();
+
         glfwSwapBuffers(window);
         
         glfwPollEvents();
     }
     
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(buffer_len, buffer_ids);
     glDeleteProgram(program);
 
     glfwTerminate();
