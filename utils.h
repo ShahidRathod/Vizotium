@@ -9,13 +9,27 @@ constexpr char* fragment_tag_st = "<fragment>";
 constexpr char* vertex_tag_en = "</vertex>";
 constexpr char* vertex_tag_en = "</fragment>";
 
-constexpr 
-template <int b_sz>
-struct Shader {
-	static constexpr int t_sz = n * n_sz;
+enum class ShaderType: int{
+	Vertex, Fragment , TeseellationControl,TessellationEval,Geometry,Compute
+};
+
+
+
+inline int shader_indx(ShaderType shadr) {
+	return static_cast<int>(shadr);
+}
+inline ShaderType shadr_by_indx(int n) {
+	return static<ShaderType>(n);
+}
+
+
+constexpr int stage_count = 6;
+
+
+struct ShaderHandel{
 	char name[n_sz];
-	char vertex[b_sz];
-	char fragment[b_sz];
+	bool active_shadrs[stage_count];
+	char shadr_ptrs[stage_count];
 };
 
 # define PRINT_EXIT(str) \
@@ -24,25 +38,35 @@ exit(EXIT_FAILURE);\
 
 
 template <int b_sz,int n>
-struct Shader_handel{
-	Shader shaders[n];
+struct ShaderReader {
+
+	constexpr char* shader_tag_err = "shader file";
+	constexpr char* subtag_err = "shader file";
+
+	ShaderHandel[]
 	FILE* file;
 
 	
     int read_content(int n,int sz) {
 
-
 	}
 	void skip_whitespc(bool strict) {
 		int c;
-
 		while ((c = fgetc(file) != EOF) and isspace(c));
 
-		if (!strict and c!= EOF) {
-			ungetc(c,file);
+		if (!strict and c != EOF) {
+			ungetc(c, file);
 		}
+	}
 
+	void is_nxt_token_tag(const char* err_msg) {
+		skip_whitespc(true);
 
+		int c = fgetc(file);
+
+		if (c != '<') {
+			PRINT_EXIT(err_msg<<"should exclusivly start with a <shader_name> tag \n");
+		}
 	}
 
 	int read_name(int n) {
@@ -63,8 +87,11 @@ struct Shader_handel{
 
 			c = putc(file);
 			if (isspace(c) or !isalnum(c)) {
-				PRINT_EXIT("Shader has whitespace or special character in between:" << c << "\n");
+				if (c != '_') {
+					PRINT_EXIT("Shader has whitespace or very special character in between:" << c << "\n");
+				}
 			}
+
 			temp_name[t_name_indx++] = c;
 		}
 		strcpy(temp_name,shaders[n].name);
@@ -77,29 +104,29 @@ struct Shader_handel{
 	
 	FILE* open_file(const char* file_name) {
 		FILE* file = fopen(file_name);
-
 		if (!file) {
-			std::cerr << "Shader file not found \n";
-			exit(EXIT_FAILURE);
+			PRINT_EXIT("File not found.");
 		}
 		return file;
 	}
-	
 	
 	Shader(const char* file_name,char (names[n_sz])[n]) {
 	
 		
 		file = open_file(file_name);
-
-		int read_len = 0;
-		int c = 0;
-		skip_whitespc(true);
-		while (read_len <= t_sz or (c = putc(file)!= EOF) {
-			int c;
-			char chr = (char)(c);
-			if (char == '<') {
-				
+		
+		for (int shader_indx = 0; shader_indx < n;shader_indx++) {
+			if ((c = putc(file) != EOF ) {
+				PRINT_EXIT("Not all shaders are present. recent shader read was "
+					<<shaders[shader_indx].name<<" -with shader index = "<<shader_indx);
 			}
+
+			is_nxt_token_tag(shader_tag_err);
+			read_name(shader_indx);
+			is_nxt_token_tag(subtag_err);
+			read_sub_tag(shader_indx);
+			int len = get_content_len();
+
 		}
 	}
 };
