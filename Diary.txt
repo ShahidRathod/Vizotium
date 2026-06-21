@@ -1,19 +1,33 @@
-Grid scaling plan - currently the grid square is of same size as that of the surface square. so there is a lower limit to size of the grid lines. this can be solved by rendering a smaller grid in the a tile of surface. by this we can make arbitaraly small/fine grids in surface . can we further implemented in the adaptive coordinates where the x-y coordinates grid density is proportional to gradient at that point (x,y) [DO NOT START IMPLIMETING THIS IN PROJECT WE FOR NOW DONT NEED ADAPTIVE COORDINATES]. I surely want to make the grid coordinates of a general plane with a vertex shader 
+Grid Scaling Plan
 
+## Initial Idea
 
+Currently the grid square size is identical to the surface mesh square size. This creates a lower limit on how fine the visible grid can become.
 
-	(s1)--------------(s1)
-	  \        \        \       
-	   \ 	    \	     \
-	    \ 	     \	      \
-	     \        \        \
-	      \-----------------\        
-	       \        \        \
-	        \ 	 \	  \
-	    	 \ 	  \        \
-	     	  \	   \        \
-	         (s2)--------------(s2)
+One possible solution was to render a smaller grid inside each surface tile. By recursively subdividing tiles, arbitrarily fine grid resolutions could be achieved without increasing the underlying surface mesh resolution.
 
+A future extension could be adaptive coordinates, where grid density is proportional to the local gradient magnitude at a point (x, y). Regions of high curvature or steep gradients would receive denser coordinate lines, while flatter regions would remain sparse.
 
+[DO NOT IMPLEMENT ADAPTIVE COORDINATES. This is only a future research idea.]
 
+I would also like the grid coordinate system to eventually become the coordinate grid of a general plane generated directly in the vertex shader.
 
+## NEXT DAY — REVISED UNDERSTANDING
+
+After further consideration, the original problem was misidentified.
+
+(1) The objective is only to reduce the visual width/thickness of the grid lines.
+
+(2) There is no practical reason to render surfaces with dimensions smaller than the underlying mesh resolution.
+
+The current surface mesh is 200 × 200. This mesh represents the optimization landscape on which gradient trajectories will be visualized. Whether the trajectory computation occurs on the CPU or GPU, the mesh is already suitable for upload as a VBO.
+
+For sensitive gradient optimization visualizations, resolutions significantly below 200 × 200 do not appear to provide sufficient accuracy. Therefore, the full 200 × 200 surface should always be rendered.
+
+## Conclusion
+
+The idea of introducing sub-grids inside individual mesh cells is unnecessary.
+
+Even a 100 × 100 visible grid is already visually dense. The requirement is not higher grid density, but thinner grid rendering.
+
+The mesh resolution remains unchanged; only the visual appearance of the grid lines should be adjusted.
