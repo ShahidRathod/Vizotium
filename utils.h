@@ -1,267 +1,290 @@
 #pragma once
-#include <iostream>
-#include <ctype.h>
 #include <cstring.h>
+#include <ctype.h>
+#include <iostream>
 constexpr int n_sz = 20;
 
 
-enum class ShaderType: int{
-	Vertex, Fragment , TessControl,TessEval,Geometry,Compute
+
+template <size_t sz, int N>
+struct ConstexprStr {
+    static const int size = (sz + 1) * N;
+    char data[size];
+
+    constexpr ConstexprStr(const char* str) {
+
+        for (int i = 0;i < size;i++)  data[i] = ' ';
+
+        int indx = 0;
+        int n = 0;
+        int j = 0;
+        char c = 0;
+
+        for (int i = 0; i < size && n + j < size; i++) {
+
+            c = str[i];
+            if (c == '\0') break;
+            else if (c == ',') {
+                n = j / sz;
+                j += sz;
+                c = '\n';
+            }
+            data[n + j] = c;
+            n++;
+        }
+
+    }
+
+    constexpr const char* operator[] (int i) const {
+        return &data[(sz + 1) * i];
+    }
+
 };
 
 
-enum class TagMode : int {
-	Open, Close
+
+enum class ShaderType : int {
+    Vertex,
+    Fragment,
+    TessControl,
+    TessEval,
+    Geometry,
+    Compute
 };
 
-enum class TagType: int {
-	Name, Subtag
-};
-enum class 
-constexpr int stage_count = 6;
+enum class TagMode : int { Open, Close };
 
-/*
-constexpr const char* tag_string_arr[stage_count * 2] =
-{
-	"<vertex>",       "</vertex>",
-	"<fragment>",     "</fragment>",
-	"<tess_control>", "</tess_control>",
-	"<tess_eval>",    "</tess_eval>",
-	"<geometry>",     "</geometry>",
-	"<compute>",      "</compute>"
-};
+enum class TagType : int { Name, Subtag };
+enum class constexpr int stage_count = 6;
+
+
 */
-constexpr int max_subtg_name_len = 13; // "tess_control" this is the largest valid subtag name 
+constexpr int max_subtg_name_len = 13; // "tess_control" this is the largest valid subtag name
 
-constexpr const char[max_subtg_name_len] subtg_names[stage_count] =
+ConstexprStr<max_subtg_name_len,stage_count> sutag_names 
 {
-	"vertex      ",
-	"fragment    ",     
-	"tess_control", 
-	"tess_eval   ",    
-	"geometry    ",
-	"compute     "
+    "vertex,fragment,tess_control,tess_eval,geometry,compute"
 };
 
+// the ConstexprStr adds the whitespce to the elements of the array 
+// DO NOT remove it, it's not for asthetic purpose 
+// in read_subtg_name we are doing strcpy (subtg_names[], subtg_name)
+// suntag_name intializes as str with whitespace repeated max_subtg_name_len
 
-// DO NOT remove the white spaces from the subtg_names, it's not for asthetic purpose
-// in read_subtg_name we are doing strcpy (subtg_names[], subtg_name) suntag_name intializes as
-// str with whitespace repeated max_subtg_name_len
+constexpr char* shader_tag_err = "shader file" constexpr char* subtag_err =
+"shader file"
 
-constexpr char* shader_tag_err = "shader file"
-constexpr char* subtag_err = "shader file"
-
-inline int shader_indx(ShaderType shadr) {
-	return static_cast<int>(shadr);
+inline int
+shader_indx(ShaderType shadr) {
+    return static_cast<int>(shadr);
 }
-inline ShaderType shadr_by_indx(int n) {
-	return static<ShaderType>(n);
+inline ShaderType shadr_by_indx(int n) { return static<ShaderType>(n); }
+
+inline const char* tag_string(ShaderType shadr, TagMode tag_t) {
+    int indx = static_cast<int>(shadr) + static_cast<int>(tag_t);
+    return tag_string_arr[indx];
 }
-
-inline const char* tag_string(ShaderType shadr,TagMode tag_t) {
-	int indx = static_cast<int>(shadr)+static_cast<int>(tag_t);
-	return tag_string_arr[indx];
-}
-
-
 
 struct ShaderHandel {
-	char name[n_sz] = {};
-	int active_shadrs[stage_count];
-	char shadr_ptrs[stage_count];
+    char name[n_sz] = {};
+    int active_shadrs[stage_count];
+    char shadr_ptrs[stage_count];
 };
 
-# define PRINT_EXIT(str) \
-std::cerr << str;
-exit(EXIT_FAILURE);\
+#define PRINT_EXIT(str) std::cerr << str;
+exit(EXIT_FAILURE);
 
-
-template <int b_sz,int n>
+template <int b_sz, int n> 
 struct ShaderReader {
 
-	bool at_comnt = false
-	int cursr = 0;
-	static constexpr int delim_len = n_sz;
-	int delim_tkn[delim_len];
-	char buffer[b_sz] = {};
-	char* write_ptr = buffer;
-	ShaderHandel handel[n];
-	int mem_left = b_sz;
-	int sz = 0;
-	bool skip_newln = true;
+    bool at_comnt = false;
+    int cursr = 0;
+    static constexpr int delim_len = n_sz;
+    int delim_tkn[delim_len];
+    char buffer[b_sz] = {};
+    char* write_ptr = buffer;
+    ShaderHandel handel[n];
+    int mem_left = b_sz;
+    int sz = 0;
+    bool skip_newln = true;
 
-	FILE* file;
+    FILE* file;
 
-	char get_nxt() {
-		int c = fgetc(file);
-		cursr = c;
+    char get_nxt() {
+        int c = fgetc(file);
+        cursr = c;
 
-		if (delm_tkn[delim_len - 2] == R"(\\)") {
-			at_comnt = true;
-		}
-		if (cursr == "\n" and at_comnt) {
-			at_comnt = false;
-		}
-		std::memmove(delim_tkn, delim_tkn + 1, delim_len - 1);
-		delim_tkn[delim_len] = cursr;
-		return c;
-	}
+        if (delm_tkn[delim_len - 2] == R"(\\)") {
+            at_comnt = true;
+        }
+        if (cursr == "\n" and at_comnt) {
+            at_comnt = false;
+        }
+        std::memmove(delim_tkn, delim_tkn + 1, delim_len - 1);
+        delim_tkn[delim_len] = cursr;
+        return c;
+    }
 
-	void skip_whitespc() {
+    bool skip_whitespc() {
 
-		while ((get_nxt() != EOF) && isspace(cursr)) {
-			if (skip_newln && cursr == "\n") break;
-		}
+        bool hit_newln = false;
+        while ((get_nxt() != EOF) && isspace(cursr)) {
+            if (cursr == "\n") {
+                hit_newln = true;
+            }
+        }
 
-		if (cursr != EOF ) {
-			ungetc(cursr, file);
-		}
-	}
+        if (cursr != EOF) {
+            ungetc(cursr, file);
+        }
+        return hit_newln;
+    }
 
-	void is_nxt_token_tag(const char* err_msg) {
-		skip_whitespc();
-		if (cursr != '<') {
-			PRINT_EXIT(err_msg << "should exclusivly start with a <shader_name> tag \n");
-		}
-	}
+    void is_nxt_token_tag(const char* err_msg) {
+        skip_whitespc();
+        if (cursr != '<') {
+            PRINT_EXIT(
+                err_msg
+                << "should exclusivly start with a <shader_name> tag \n");
+        }
+    }
 
-	inline bool is_nxt_token(const char* str,int len) {
-		skip_whitespc();
-		return (*(delim_tkn - 2 != str));
+    inline bool is_nxt_token (const char* str, int len,bool cheak_newln = false) {
+        if (cheak_newln && skip_whitespc()) {
+            PRINT_EXIT("Expected (" << str << ") before newline");
+        }
 
-	}
+        return (*(delim_tkn - 2 != str);
+    }
 
-	void is_nxt_tkn_clstg(const char* err_msg) {
-		if (!is_nxt_token("</",2)) {
-			PRINT_EXIT("Expected a closing tag for"<<err_msg);
-		}
-	}
+    void is_nxt_tkn_clstg(const char* err_msg) {
+        if (!is_nxt_token("</", 2)) {
+            PRINT_EXIT("Expected a closing tag for" << err_msg);
+        }
+    }
 
-	void cpy_tag_name_at(const char* name_dst, ) {
-		char temp_name[n_sz] = {};
-		skip_newln = false;
-		skip_whitespc(true);
-		//firt character in tag after the whitespace being skipped is first character of name 
-		if (!isalpha(cursr)) {
-			PRINT_EXIT("Shader name cannot start with special character or number:" << c << "\n");
-		}
-		int t_name_indx = 0;
-		temp_name[t_name_indx] = cursr;
+    void cpy_tag_name_at(const char* name_dst, ) {
+        char temp_name[n_sz] = {};
+        skip_newln = false;
+        if (skip_whitespc()) {
+            PRINT_EXIT("No newline character inside tags");
+        }
+        // firt character in tag after the whitespace being skipped is first
+        // character of name
+        if (!isalpha(cursr)) {
+            PRINT_EXIT(
+                "Shader name cannot start with special character or number:"
+                << c << "\n");
+        }
+        int t_name_indx = 0;
+        temp_name[t_name_indx] = cursr;
 
-		while (!is_nxt_token(">")) { // <-- in is_nxt_token call read a next character 
+        while (!is_nxt_token(">",true)) { // <-- in is_nxt_token call read a next
+            // character true argument is check_newln
+            if (t_name_indx >= n_sz) {
+                PRINT_EXIT("Shader name exceeds the name buffer size"
+                    << n_sz << " name= " << temp_name << "\n");
+            }
 
-			if (t_name_indx >= n_sz) {
-				PRINT_EXIT("Shader name exceeds the name buffer size" << n_sz << " name= " << temp_name << "\n");
-			}
+            if ((isspace(cursr) || !(isalnum(cursr) && cursr != '_')) {
+                PRINT_EXIT("Shader has whitespace or very special character in "
+                    "between:"
+                    << c << "\n");
 
-			if ((isspace(cursr) || !(isalnum(cursr) && cursr!= '_')) {
-				PRINT_EXIT("Shader has whitespace or very special character in between:" << c << "\n");
-				
-			}
-			temp_name[t_name_indx++] = c;
-		}
-		temp_name[t_name_indx + 1] = '\n';
-		strcpy(temp_name, name_dst)
+            }
+            temp_name[t_name_indx++] = c;
+        }
+        temp_name[t_name_indx + 1] = '\n';
+        strcpy(temp_name, name_dst);
 
-	}
+    }
 
-	int read_subtag(int shdr_indx) {
+    int check_subtag(char* sbtg_name) {
 
-		char name_buff[max_subtg_name_len] = {};
-		memset(name_buff, ' ', max_subtg_name_len - 1);
-		//ShaderType type;
-		//is_nxt_token_tag();
-		cpy_tag_name_at(name_buff);
+        bool found = false;
+        int i = stage_count - 1;
+        while (i >= 0) {
+            if (strcmp(sbtg_name, subtg_names[i] != 0) {
+                found = true;
+                break;
+            }
+            i--;
+        }
 
-		bool found = false;
-		int i = stage_count - 1;
-		while (i >= 0) {
-			if (strcmp(name_buff, subtg_names[i] != 0) {
-				found = true;
-				break;
-			}
-			i--;
-		}
+        if (!found) {
+            PRINT_EXIT(name_buff << "is not a valid subtag name.");
+        }
+        handel[indx].active_shaders++;
+        return i;
+    }
 
-		if (!found) {
-			PRINT_EXIT(name_buff << "is not a valid subtag name.");
-		}
-		handel[indx].active_shaders++;
-		return i;
-	}
+    void read_shader(int shadr_indx) {
+        is_nxt_token_tag();
+        char* currnt_shdr_name = handel[shadr_indx].name;
+        cpy_tag_name_at(currnt_shdr_name);
+        char name_buff[n_sz] = {};
+        while (strcmp(name_check_buff, currnt_shdr_name)) {
+            is_nxt_token_tag();
+            memset(name_buff, ' ', max_subtg_name_len - 1);
+            cpy_tag_name_at(name_check_buff);
+            check_subtag(name_buff);
+            read_content();
+        }
+    }
+    int read_content(int shadr_indx, int type_indx) {
 
-	void read_shader(int shadr_indx) {
-		is_nxt_token_tag();
-		char* currnt_shdr_name = handel[shadr_indx].name;
-		
-		cpy_tag_name_at(currnt_shdr_name);
-		char name_check_buff[n_sz] = {};
-		while (strcmp(name_check_buff, currnt_shdr_name)) {
-			is_nxt_token_tag();
-			cpy_tag_name_at(name_check_buff);
-			read_content();
-		}
-	}
-	int read_content(int shadr_indx, int type_indx) {
-		
-		int len = 0;
+        int len = 0;
 
-		while (*(delim_tkn - 2) != "</"  || at_comnt) {
-			len++;
-			get_nxt();
-		}
+        while (*(delim_tkn - 2) != "</" || at_comnt) {
+            len++;
+            get_nxt();
+        }
 
-		int i = read_subtag();
-		if (type_indx != i) {
+        int i = read_subtag();
+        if (type_indx != i) {
 
-			PRINT_EXIT(
-				"Close tag subtag name:"
-				<< subtg_names[i] << " does not match with "
-				<< subtg_tag[type_indx] << "\n");
-		}
-		
-		if (mem_left < len - 1) {
-			PRINT_EXIT("INSUFFICIENT SPACE \n");
-		}
+            PRINT_EXIT("Close tag subtag name:"
+                << subtg_names[i] << " does not match with "
+                << subtg_tag[type_indx] << "\n");
+        }
 
-		fseek(file, -(len), SEEK_CUR);
-		/* the len-2 is a adjustment
-		since we dont want to write '</' in the shaders*/
+        if (mem_left < len - 1) {
+            PRINT_EXIT("INSUFFICIENT SPACE \n");
+        }
 
-		fgets(write_ptr,(len-2)*sizeof(char),file);
-		*(write + len-1) = "\0";
-		write += len;
-		handel[shadr_indx].shadr_ptr[type_indx] = write;
-		return len -1;
-	}
+        fseek(file, -(len), SEEK_CUR);
+        /* the len-2 is a adjustment
+        since we dont want to write '</' in the shaders*/
 
-	FILE* open_file(const char* file_name) {
-		FILE* file = fopen(file_name);
-		if (!file) {
-			PRINT_EXIT("File not found.");
-		}
-		return file;
-	}
-	
-	Shader(const char* file_name,char (names[n_sz])[n]) {	
-		file = open_file(file_name);
-		for (int shader_indx = 0; shader_indx < n;shader_indx++) {
+        fgets(write_ptr, (len - 2) * sizeof(char), file);
+        *(write + len - 1) = "\0";
+        write += len;
+        handel[shadr_indx].shadr_ptr[type_indx] = write;
+        return len - 1;
+    }
 
-			if ((c = putc(file) != EOF ) {
-				PRINT_EXIT("Not all shaders are present. recent shader read was "
-					<<shaders[shader_indx].name<<" -with shader index = "<<shader_indx);
-			}
+    FILE* open_file(const char* file_name) {
+        FILE* file = fopen(file_name);
+        if (!file) {
+            PRINT_EXIT("File not found.");
+        }
+        return file;
+    }
 
-			is_nxt_token_tag(shader_tag_err);
-			cpy_tag_name_at(shader[shader_indx].name);
-			read_Shader();
+    Shader(const char* file_name, char(names[n_sz])[n]) {
+        file = open_file(file_name);
 
-		}
-	}
+        for (int shader_indx = 0; shader_indx < n; shader_indx++) {
+            skip_whitespc();
+            if (cursr== EOF) {
+                PRINT_EXIT(
+                    "Not all shaders are present. recent shader read was "
+                    << shaders[shader_indx].name
+                    << " -with shader index = " << shader_indx);
+            }
+            is_nxt_token_tag(shader_tag_err,"shader name");
+            cpy_tag_name_at(shader[shader_indx].name);
+            read_Shader();
+        }
+    }
 };
-
-
-int main() {
-	
-
-}
