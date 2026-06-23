@@ -72,8 +72,8 @@ inline const char* tag_string(ShaderType shadr, TagMode tag_t) {
 
 struct ShaderHandel {
     char name[n_sz] = {};
-    int active_shadrs[stage_count];
-    char shadr_ptrs[stage_count];
+    int active_shaders[stage_count];
+    char* shadr_ptrs[stage_count];
 };
 
 #define PRINT_EXIT(str) \
@@ -84,9 +84,9 @@ template <int b_sz, int n>
 struct ShaderReader {
 
     bool at_comnt = false;
-    int cursr = 0;
+    char cursr = 0;
     static constexpr int delim_len = n_sz;
-    int delim_tkn[delim_len];
+    char delim_tkn[delim_len];
     char buffer[b_sz] = {};
     char* write_ptr = buffer;
 
@@ -99,12 +99,12 @@ struct ShaderReader {
 
     char get_nxt() {
         int c = fgetc(file);
-        cursr = c;
+        cursr = (char)c;
 
-        if (delim_tkn[delim_len - 2] == R"(\\)") {
+        if (strcmp(delim_tkn+delim_len - 2 , R"(\\)")==0) {
             at_comnt = true;
         }
-        if (cursr == "\n" and at_comnt) {
+        if (cursr == '\n' and at_comnt) {
             at_comnt = false;
         }
         std::memmove(delim_tkn, delim_tkn + 1, delim_len - 1);
@@ -115,7 +115,7 @@ struct ShaderReader {
     bool skip_whitespc() {
         bool hit_newln = false;
         while ((get_nxt() != EOF) && isspace(cursr)) {
-            if (cursr == "\n") {
+            if (cursr == '\n') {
                 hit_newln = true;
             }
         }
@@ -141,18 +141,17 @@ struct ShaderReader {
             PRINT_EXIT("Expected (" << str << ") before newline");
         }
 
-        return *(delim_tkn - 2 ) == str;
+        return strcmp((delim_tkn - len ) , str)==0;
     }
 
     void is_nxt_tkn_clstg(const char* err_msg) {
-        if (!is_nxt_token("</", 2)) {
+        if (is_nxt_token("</", 2)) {
             PRINT_EXIT("Expected a closing tag for" << err_msg);
         }
     }
 
     void cpy_tag_name_at(const char* name_dst) {
         char temp_name[n_sz] = {};
-        skip_newln = false;
         if (skip_whitespc()) {
             PRINT_EXIT("No newline character inside tags");
         }
@@ -185,6 +184,7 @@ struct ShaderReader {
         }
         temp_name[t_name_indx + 1] = '\n';
         strcpy(temp_name, name_dst);
+
     }
 
     int check_subtag(char* sbtg_name) {
@@ -211,28 +211,42 @@ struct ShaderReader {
         char* currnt_shdr_name = handel[shadr_indx].name;
         cpy_tag_name_at(currnt_shdr_name);
         char name_buff[n_sz] = {};
-        while (strcmp(name_buff, currnt_shdr_name)) {
-            is_nxt_token_tag("Shader tag ");
-            memset(name_buff, ' ', max_subtg_name_len - 1);
+        skip_newln = true;
+        for (int i = 0;i < stage_count;i++) {
+            is_nxt_token_tag("Element closing or Shader ");
             cpy_tag_name_at(name_buff);
-            check_subtag(name_buff);
-            read_content(shadr_indx);
+            if (name_buff[0] == '/') {
+                if ((strcmp(name_buff+1, currnt_shdr_name)) != 0 || name_buff[1]!='\0') {
+                    PRINT_EXIT(
+                        "Element(" << shadr_indx
+                        << "): open tag-" << currnt_shdr_name
+                        << " does not match close tag-" << name_buff);
+                }
+                break;
+            }
+            int type_indx = check_subtag(name_buff);
+            read_content(shadr_indx,type_indx,name_buff);
+           
         }
     }
 
-    int read_content(int shadr_indx, int type_indx) {
+    int read_content(int shadr_indx, int type_indx,char* opn_shdr_tg) {
         int len = 0;
 
-        while (*(delim_tkn - 2) != "</" || at_comnt) {
+        while (strcmp((delim_tkn - 1) , "</")==0 || at_comnt) {
             len++;
             get_nxt();
         }
 
-        int i  = check_subtag();
-        if (type_indx != i) {
+        char cls_shdr_tg[max_subtg_name_len];
+        cpy_tag_name_at(cls_shdr_tg);
+        
+       // int i  = check_subtag(cls_shdr_tg);
+
+        if (strcmp(opn_shdr_tg,cls_shdr_tg)!=0) {
             PRINT_EXIT("Close tag subtag name:"
-                << subtag_names[i] << " does not match with "
-                << subtag_names[type_indx] << "\n");
+                <<cls_shdr_tg << " does not match with "
+                << opn_shdr_tg << "\n");
         }
 
         if (mem_left < len - 1) {
@@ -244,9 +258,9 @@ struct ShaderReader {
         since we dont want to write '</' in the shaders*/
 
         fgets(write_ptr, (len - 2) * sizeof(char), file);
-        *(write_ptr + len - 1) = "\0";
+        *(write_ptr + len - 1) = '\0';
         write_ptr += len;
-        handel[shadr_indx].shadr_ptr[type_indx] = write_ptr;
+        handel[shadr_indx].shadr_ptrs[type_indx] = write_ptr;
         return len - 1;
     }
 
