@@ -1,6 +1,4 @@
-
 #include <ctype.h>
-
 #include <cstring>
 #include <iostream>
 
@@ -77,7 +75,7 @@ struct ShaderHandel {
 };
 
 #define PRINT_EXIT(str) \
-std::cerr << str;\
+std::cerr<<"LINE NO:("<<ln_no <<"):"<<char_no<<" "<< str;\
 exit(EXIT_FAILURE);\
 
 template <int b_sz, int n>
@@ -90,6 +88,8 @@ struct ShaderReader {
     char buffer[b_sz] = {};
     char* write_ptr = buffer;
 
+    int ln_no = 0;
+    int char_no = 0;
     ShaderHandel handel[n];
     int mem_left = b_sz;
     int sz = 0;
@@ -105,19 +105,24 @@ struct ShaderReader {
             at_comnt = true;
         }
         if (cursr == '\n' and at_comnt) {
+            ln_no++;
             at_comnt = false;
         }
+        std::cout << cursr<<"|";
         std::memmove(delim_tkn, delim_tkn + 1, delim_len - 1);
-        delim_tkn[delim_len] = cursr;
+        delim_tkn[delim_len-1] = cursr;
+        char_no++;
         return c;
     }
 
     bool skip_whitespc() {
         bool hit_newln = false;
-        while ((get_nxt() != EOF) && isspace(cursr)) {
+        while ((cursr != EOF) && isspace(cursr)) {
             if (cursr == '\n') {
+                ln_no++;
                 hit_newln = true;
             }
+            get_nxt();
         }
 
         if (cursr != EOF) {
@@ -128,19 +133,19 @@ struct ShaderReader {
 
     void is_nxt_token_tag(const char* err_msg) {
         skip_whitespc();
-        if (cursr != '<') {
+        if (get_nxt() != '<') {
             PRINT_EXIT(
                 err_msg
                 << "was expected before\n");
         }
+        get_nxt();
     }
 
-    inline bool is_nxt_token(const char* str, int len, bool cheak_newln = false) {
 
+    inline bool is_nxt_token(const char* str, int len, bool cheak_newln = false) {
         if (cheak_newln && skip_whitespc()) {
             PRINT_EXIT("Expected (" << str << ") before newline");
         }
-
         return strcmp((delim_tkn - len ) , str)==0;
     }
 
@@ -152,6 +157,7 @@ struct ShaderReader {
 
     void cpy_tag_name_at(const char* name_dst) {
         char temp_name[n_sz] = {};
+
         if (skip_whitespc()) {
             PRINT_EXIT("No newline character inside tags");
         }
@@ -165,17 +171,22 @@ struct ShaderReader {
         int t_name_indx = 0;
         temp_name[t_name_indx] = cursr;
 
-        while (!is_nxt_token(">", true)) {  // <-- in is_nxt_token call read a next character
+        while (get_nxt()!='>') {  // <-- in is_nxt_token call read a next character
             // true argument is check_newln
+            if (isspace(cursr)) {
+                if (is_nxt_token(">", 1)) break;
+                else PRINT_EXIT("Shader name has whitespace in between ");
+                
+            }
             if (t_name_indx >= n_sz) {
                 PRINT_EXIT("Shader name exceeds the name buffer size"
                     << n_sz << " name= " << temp_name << "\n");
             }
 
-            if (!isalnum(cursr) || cursr == '_')
+            if (!isalnum(cursr) || cursr != '_')
             {
                 PRINT_EXIT(
-                    "Shader has whitespace or very special character in "
+                    "Shader has very special character in "
                     "between:"
                     << cursr << "\n");
             }
@@ -282,10 +293,10 @@ struct ShaderReader {
             if (cursr == EOF) {
                 PRINT_EXIT(
                     "Not all shaders are present. recent shader read was "
-                    << handel[shader_indx] .name
+                    << handel[shader_indx].name
                     << " -with shader index = " << shader_indx);
             }
-            is_nxt_token_tag( "shader name");
+            is_nxt_token_tag( "shader name ");
             cpy_tag_name_at(handel[shader_indx].name);
             read_shader(shader_indx);
         }
@@ -336,8 +347,7 @@ struct ShaderReader {
 
 int main() {
 
-    ShaderReader<200,6> sr("shaders.txt");
-    
+    ShaderReader<200, 6> sr("shaders.txt");
     std::cout << "code compiled";
 
 }
