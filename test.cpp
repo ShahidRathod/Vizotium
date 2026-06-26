@@ -19,7 +19,7 @@ enum class TagType : int { Name, Subtag };
 template <size_t sz, int N>
 struct ConstexprStr {
     static const int size = (sz + 1) * N;
-    char data[size];
+    char data[size] = {' '};
 
     constexpr ConstexprStr(const char* str) {
         for (int i = 0; i < size; i++) data[i] = ' ';
@@ -31,12 +31,11 @@ struct ConstexprStr {
 
         for (int i = 0; i < size && n + j < size; i++) {
             c = str[i];
-            if (c == '\0')
-                break;
+            if (c == '\0') break;
             else if (c == ',') {
                 n = j / sz;
                 j += sz;
-                c = '\n';
+                c = '\0';
             }
             data[n + j] = c;
             n++;
@@ -52,7 +51,7 @@ struct ConstexprStr {
 constexpr int max_subtg_name_len =13;  // "tess_control" this is the largest valid subtag name
 constexpr int stage_count = 6;
 ConstexprStr<max_subtg_name_len, stage_count> subtag_names{
-    "vertex,fragment,tess_control,tess_eval,geometry,compute" };
+    "vertex,fragment,tess_control,tess_eval,geometry,compute," };
 
 // the ConstexprStr adds the whitespce to the elements of the array
 // DO NOT remove it, it's not for asthetic purpose
@@ -71,7 +70,11 @@ inline const char* tag_string(ShaderType shadr, TagMode tag_t) {
 struct ShaderHandel {
     char name[n_sz] = {};
     int active_shaders[stage_count];
+    int shdr_line_no[stage_count * 2] = {-1};
+    int start = -1;
+    int end = -1;
     char* shadr_ptrs[stage_count];
+
 };
 
 #define PRINT_EXIT(str) \
@@ -88,74 +91,67 @@ struct ShaderReader {
     char buffer[b_sz] = {};
     char* write_ptr = buffer;
 
-    int ln_no = 0;
+    int ln_no = 1;
     int char_no = 0;
     ShaderHandel handel[n];
     int mem_left = b_sz;
     int sz = 0;
     bool skip_newln = true;
 
+    ShaderHandel* curnt_element = handel;
+    int curnt_indx = 0;
     FILE* file;
 
     char get_nxt() {
         int c = fgetc(file);
         cursr = (char)c;
 
-        if (strcmp(delim_tkn+delim_len - 2 , R"(\\)")==0) {
+        if (strcmp(delim_tkn + delim_len - 2, R"(\\)") == 0) {
             at_comnt = true;
         }
         if (cursr == '\n' and at_comnt) {
             ln_no++;
             at_comnt = false;
+            
         }
-        std::cout << cursr<<"|";
         std::memmove(delim_tkn, delim_tkn + 1, delim_len - 1);
-        delim_tkn[delim_len-1] = cursr;
-        char_no++;
+        delim_tkn[0] = cursr;
+        delim_tkn[delim_len] = '\0';
         return c;
+    }
+
+    inline bool is_nxt_char(const char chr) {
+       
+        if ( skip_whitespc()) {
+            PRINT_EXIT("Expected (" << chr << ") before newline");
+        }
+        return delim_tkn[0] == chr;
     }
 
     bool skip_whitespc() {
         bool hit_newln = false;
         while ((cursr != EOF) && isspace(cursr)) {
             if (cursr == '\n') {
-                ln_no++;
+     
                 hit_newln = true;
             }
             get_nxt();
-        }
-
-        if (cursr != EOF) {
-            ungetc(cursr, file);
         }
         return hit_newln;
     }
 
     void is_nxt_token_tag(const char* err_msg) {
         skip_whitespc();
-        if (get_nxt() != '<') {
+        if (cursr != '<') {
             PRINT_EXIT(
                 err_msg
-                << "was expected before\n");
+                << "was expected before: "<<(int)cursr<<cursr<<"\n");
         }
         get_nxt();
     }
 
 
-    inline bool is_nxt_token(const char* str, int len, bool cheak_newln = false) {
-        if (cheak_newln && skip_whitespc()) {
-            PRINT_EXIT("Expected (" << str << ") before newline");
-        }
-        return strcmp((delim_tkn - len ) , str)==0;
-    }
-
-    void is_nxt_tkn_clstg(const char* err_msg) {
-        if (is_nxt_token("</", 2)) {
-            PRINT_EXIT("Expected a closing tag for" << err_msg);
-        }
-    }
-
-    void cpy_tag_name_at(const char* name_dst) {
+    void cpy_tag_name_at( char* name_dst) {
         char temp_name[n_sz] = {};
 
         if (skip_whitespc()) {
@@ -168,13 +164,13 @@ struct ShaderReader {
                 "Shader name cannot start with special character or number:"
                 << cursr << "\n");
         }
+        
         int t_name_indx = 0;
-        temp_name[t_name_indx] = cursr;
-
-        while (get_nxt()!='>') {  // <-- in is_nxt_token call read a next character
-            // true argument is check_newln
+        while (cursr!='>') {  
+     
             if (isspace(cursr)) {
-                if (is_nxt_token(">", 1)) break;
+                
+                if (is_nxt_char('>')) break; 
                 else PRINT_EXIT("Shader name has whitespace in between ");
                 
             }
@@ -183,7 +179,7 @@ struct ShaderReader {
                     << n_sz << " name= " << temp_name << "\n");
             }
 
-            if (!isalnum(cursr) || cursr != '_')
+            if ( isalnum(cursr)==0 && cursr != '_')
             {
                 PRINT_EXIT(
                     "Shader has very special character in "
@@ -192,17 +188,22 @@ struct ShaderReader {
             }
 
             temp_name[t_name_indx++] = cursr;
+            get_nxt();
         }
+        get_nxt();
+
         temp_name[t_name_indx + 1] = '\n';
-        strcpy(temp_name, name_dst);
+        strcpy(name_dst, temp_name);
 
     }
 
     int check_subtag(char* sbtg_name) {
         bool found = false;
+
         int indx = stage_count - 1;
         while (indx >= 0) {
-            if (strcmp(sbtg_name, subtag_names[indx]) != 0) {
+            if (strcmp(sbtg_name, subtag_names[indx]) == 0) {
+                std::cout << sbtg_name << " " << subtag_names[indx]<<"\n";
                 found = true;
                 break;
             }
@@ -210,45 +211,70 @@ struct ShaderReader {
         }
 
         if (!found) {
-            PRINT_EXIT(sbtg_name << "is not a valid subtag name.");
+            PRINT_EXIT(sbtg_name << " is not a valid subtag name.");
         }
+       
+        curnt_element->shdr_line_no[2 * indx] = ln_no;
+        if ((curnt_element->active_shaders[indx]++) > 0) {
+            PRINT_EXIT(
+                "Shader: "<<sbtg_name<<" Element: "
+                <<curnt_element->name<<" is already defined line at  ("
+                <<curnt_element->shdr_line_no[2*indx]
+                <<","<<curnt_element->shdr_line_no[2 * indx+1] <<")" << "\n");
+        };
 
-        handel[indx].active_shaders++;
         return indx;
     }
 
-    void read_shader(int shadr_indx) {
-        is_nxt_token_tag("Element name tag ");
-        char* currnt_shdr_name = handel[shadr_indx].name;
-        cpy_tag_name_at(currnt_shdr_name);
+    void read_element() {
+    
+        char* element_name = curnt_element->name;
+        is_nxt_token_tag("Element tag ");
+        cpy_tag_name_at(element_name);
+        
+        curnt_element->start = ln_no;
         char name_buff[n_sz] = {};
-        skip_newln = true;
+
         for (int i = 0;i < stage_count;i++) {
+          
             is_nxt_token_tag("Element closing or Shader ");
+            bool is_cls = is_nxt_char('/');
+            if (is_cls) get_nxt();
             cpy_tag_name_at(name_buff);
-            if (name_buff[0] == '/') {
-                if ((strcmp(name_buff+1, currnt_shdr_name)) != 0 || name_buff[1]!='\0') {
+
+            std::cout << "Element tag name: " << element_name
+                << "  Shader name tag: " << name_buff << "\n";
+
+            int type_indx = check_subtag(name_buff);
+            std::cout << type_indx<<"<-typeindx\n";
+            if (is_cls) {
+                if ((strcmp(name_buff, element_name)) != 0) {
                     PRINT_EXIT(
-                        "Element(" << shadr_indx
-                        << "): open tag-" << currnt_shdr_name
+                        "Element(" << curnt_indx
+                        << "): open tag-" << element_name
                         << " does not match close tag-" << name_buff);
+
+                    curnt_element->end = ln_no;
                 }
                 break;
             }
-            int type_indx = check_subtag(name_buff);
-            read_content(shadr_indx,type_indx,name_buff);
+
+            read_content( type_indx, name_buff);
            
         }
     }
 
-    int read_content(int shadr_indx, int type_indx,char* opn_shdr_tg) {
+    int read_content( int type_indx,char* opn_shdr_tg) {
         int len = 0;
 
-        while (strcmp((delim_tkn - 1) , "</")==0 || at_comnt) {
+        while (strcmp(delim_tkn  , "</")!=0 && at_comnt ) {
             len++;
             get_nxt();
+
         }
 
+        std::cout << len << "<-content length\n";
+        curnt_element->shdr_line_no[2 * type_indx + 1] = ln_no;
         char cls_shdr_tg[max_subtg_name_len];
         cpy_tag_name_at(cls_shdr_tg);
         
@@ -259,6 +285,7 @@ struct ShaderReader {
                 <<cls_shdr_tg << " does not match with "
                 << opn_shdr_tg << "\n");
         }
+      
 
         if (mem_left < len - 1) {
             PRINT_EXIT("INSUFFICIENT SPACE \n");
@@ -271,7 +298,7 @@ struct ShaderReader {
         fgets(write_ptr, (len - 2) * sizeof(char), file);
         *(write_ptr + len - 1) = '\0';
         write_ptr += len;
-        handel[shadr_indx].shadr_ptrs[type_indx] = write_ptr;
+        curnt_element->shadr_ptrs[type_indx] = write_ptr;
         return len - 1;
     }
 
@@ -288,6 +315,11 @@ struct ShaderReader {
     ShaderReader(const char* file_name) {
         
         file = open_file(file_name);
+        get_nxt(); //  we need to read first character of file before calling is whitespc 
+                   // else the isspace(cursr = 0) == false and loop will not continue 
+                   // and nxt_token_tag is get cursr as 0 and its not '<' out error  
+
+        
         for (int shader_indx = 0; shader_indx < n; shader_indx++) {
             skip_whitespc();
             if (cursr == EOF) {
@@ -296,9 +328,10 @@ struct ShaderReader {
                     << handel[shader_indx].name
                     << " -with shader index = " << shader_indx);
             }
-            is_nxt_token_tag( "shader name ");
-            cpy_tag_name_at(handel[shader_indx].name);
-            read_shader(shader_indx);
+           
+            read_element();
+            curnt_element++;
+            curnt_indx++;
         }
     }
     
@@ -347,7 +380,10 @@ struct ShaderReader {
 
 int main() {
 
-    ShaderReader<200, 6> sr("shaders.txt");
-    std::cout << "code compiled";
-
+    
+   
+    for (int i = 0; i < stage_count; i++) std::cout << subtag_names[i]<<strlen(subtag_names[i]) << "\n";
+    ShaderReader<200, 2> sr("shaders.txt");
+   std::cout << "code compiled";
+   
 }
