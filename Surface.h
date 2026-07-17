@@ -100,6 +100,7 @@ enum class Clr : int {
 #define RAD(x) glm::radians((x))
 
 constexpr double PI= 3.14159265358979323846;
+
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
@@ -125,22 +126,21 @@ struct Camera {
     inline void limit_angle(float& angle,float lower,float upper) {
 
         if (angle >= upper) {
-            angle = upper-1;
+            angle = upper-0.01;
         }
         if (angle <= lower) {
-            angle = lower+1;
+            angle = lower+0.01;
         }
 
     }
     void inc_yaw(float x){
         yaw += x;
-
-       // limit_angle(yaw,0,360);
-      
+       // limit_angle(yaw,0,360); no need to bound the rotation around the Z-axis. 
     }
+
     void inc_pitch(float y) {
         pitch += y;
-       limit_angle(pitch,0,180);
+        limit_angle(pitch,0,180);
     }
 
 
@@ -177,11 +177,12 @@ struct Camera {
         float r = give_scale();
 
         glm::vec3 eye(
-            r * cp * cy,
-            r * sp,
-            r * cp * sy
+            r * cp * cy, //x
+            r * sp,      //y is independent of Yaw it is the axis of rotation of Yaw 
+            r * cp * sy  //z 
         );
-        int sign = sgn(cp);
+
+        int sign = sgn(cp); 
 
         std::cout<<"\nsign: "<<sign;
         view = glm::lookAt(glm::vec3(eye),glm::vec3(0,0,0),glm::vec3(0,sign*1,0));
@@ -215,11 +216,11 @@ public:
     Surface(const float c_x, const float c_y, const float x, const float y) {
         float x_st = c_x - x;
         float y_st = c_y - y;
-        float y_inc = 2 * y / (y_sz - 1);
+        float y_inc = 2 * y / (y_sz - 1);  // -1 because n-1 cordinated away from last cordinate
         float x_inc = 2 * x / (x_sz - 1);
 
         /// Eb array insitialization 
-        int ebo_stride = x_sz - 1;
+        int ebo_stride = x_sz - 1; 
 
 
         for (int i = 0; i < y_sz - 1; i++) {
@@ -228,12 +229,12 @@ public:
 
                 Ebo_sqre& sqre = ebo_arr[indx];
 
-                // ebo array is mappings to arr which has stride x_sz
+                // ebo array is GLTringle coordinate mappings and arr has stride x_sz
                 int ebo_indx = j + i * x_sz;
                 
                 sqre = Ebo_sqre{
                     {ebo_indx, ebo_indx + 1, ebo_indx + x_sz},
-                    {ebo_indx + 1, ebo_indx + x_sz, ebo_indx + 1 + x_sz}
+                    {ebo_indx + 1, ebo_indx + x_sz, ebo_indx + x_sz + 1}
                 };
 
                 //if (mat_debug) { std::cout << sqre << "\n"; }
@@ -326,13 +327,21 @@ inline void coords_vao_setup
 
     glBindVertexArray(vaoid);
 
-    glBindBuffer(GL_ARRAY_BUFFER,vboid);
+    glBindBuffer(GL_ARRAY_BUFFER,vboid); // Shared or not - we always make the
+                                         // VBObuffer of vboid in the current context. 
+
     if constexpr (!shared_vbo) {
         glBufferData(GL_ARRAY_BUFFER, vbo_sz, vbo_arr,GL_STATIC_DRAW);
     }
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboid);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,ebo_sz,ebo_arr,GL_STATIC_DRAW);
+
+
+    // since this is a VAO setup for coordinates 
+    // therefore arguments for:  
+    // layout = 0 for now 
+    // (x,y,z) cartisian coordiates
 
     glVertexAttribPointer(
         0,
@@ -341,7 +350,8 @@ inline void coords_vao_setup
         GL_FALSE,
         3 * sizeof(float),
         nullptr
-    );
+    ); 
+
     glEnableVertexAttribArray(0);
 }
 
@@ -352,7 +362,8 @@ struct GLSurfaceHandel {
 
     GLSurfaceHandel(Surface <x_sz, y_sz>* sur) {
         surPtr = sur;
-        coords_vao_setup<false>(VBO,EBO,VAO, surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz(), surPtr->gl_arr(), surPtr->gl_vbo_sz());
+        coords_vao_setup<false>(VBO,EBO,VAO, 
+            surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz(), surPtr->gl_arr(), surPtr->gl_vbo_sz());
       
     }
 
@@ -394,7 +405,7 @@ struct Grid {
     glm::vec4 rgba;
 
     GridCell<ebo_stride> x_lines[x_grid_len];
-    GridCell<y_grid_len> y_lines[ebo_stride];
+    GridCell<y_grid_len> y_lines[ebo_stride]; 
     
     GLuint VBO,VAO, EBO;
 
@@ -409,7 +420,7 @@ struct Grid {
          for (int i = 0; i < x_grid_len;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
             Ebo_sqre* ith_line = x_lines[i].ebo;
-            memcpy(ith_line, &grid_ptr[(i+1) * line_intervl], sizeof(Ebo_sqre) * y_sz);
+            memcpy(ith_line, &grid_ptr[(i+1) * line_intervl], sizeof(Ebo_sqre) * (y_sz-1));
         }
        
         for (int i = 0; i < x_sz; i++) {
@@ -420,7 +431,7 @@ struct Grid {
              }
          }
 
-         coords_vao_setup<true>
+         coords_vao_setup<true> // Grid shares vbo from surface  
              (VBO, VAO, EBO, gl_ebo_arr(), gl_ebo_sz());
     }
     
@@ -430,6 +441,7 @@ struct Grid {
         glUniform1i(is_gridLoc, true);
 
         glBindVertexArray(VAO);
+
         glDrawElements(
             GL_TRIANGLES,
             gl_ebo_count(),
@@ -442,17 +454,16 @@ struct Grid {
     int gl_ebo_sz() { return sizeof(x_lines)+sizeof(y_lines); }
     int gl_ebo_count() {return 6*gl_ebo_sz() / sizeof(Ebo_sqre); }
 
-
 };
 
 template <int line_intervl, int line_width ,int x_sz, int y_sz >
 struct SurfaceGrid {
     
-    using MajorGridT = Grid <line_intervl/2, line_width * 3, x_sz, y_sz>;
-    using MinorGridT = Grid <line_intervl, line_width, x_sz, y_sz>;
+    using MinorGridT = Grid <line_intervl/2, line_width * 3, x_sz, y_sz>;
+    using MajorGridT = Grid <line_intervl, line_width, x_sz, y_sz>;
     
     MajorGridT major_grid{};
-    MinorGridT minor_grid{};
+    MinorGridT minor_grid{}; 
 
     SurfaceGrid(GLSurfaceHandel<x_sz, y_sz> sur_handel) {
 
@@ -463,12 +474,12 @@ struct SurfaceGrid {
         minor_grid = MinorGridT( sur_handel.VBO,
                                  sur_handel.surPtr->gl_ebo_arr(),
                                  glm::vec4(1) );
+
     }
 
     void draw() {
         major_grid.draw();
         minor_grid.draw();
     }
-
-    
-};
+ 
+}; 
