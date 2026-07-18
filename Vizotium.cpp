@@ -221,16 +221,11 @@ float spiral_y (vec3 p) {
 
 void main()
 {
-
+ 
 vec3 pos = coords;
 vec3 side_pos = coords_side;
-pos.y = spiral_y(pos);
-side_pos.y = spiral_y(side_pos);
 
-if (is_grid) {
-         pos.xz = mix(pos.xz, side_pos.xz, factr);
-         
-}
+side_pos.y = spiral_y(side_pos);
 
 
 vec4 Pos = MVP * vec4(pos, 1.0);
@@ -242,7 +237,8 @@ vec4 Pos = MVP * vec4(pos, 1.0);
     if (is_grid) {
         Pos.y += 0.001;
     }
-
+    
+   
     gl_Position = Pos;
 }
 )";

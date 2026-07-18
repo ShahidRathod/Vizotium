@@ -250,6 +250,8 @@ public:
                 coord_xy.Z = y_st + y_inc * i;
             }
         }
+
+    std::cout << "surface constructor complete \n";
     }
 
     /*template <Axis a, Axis b, Axis res>
@@ -430,10 +432,11 @@ struct Grid {
 
     Grid() {}
 
-    Grid(float* data ,GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
+    Grid(Vertex* data ,GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
+
         Vertex* v_ptr = (Vertex*)(data);
-        x_f = (v_ptr[0].x - v_ptr[1].x)*0.9;
-        y_f = (v_ptr[0].y - v_ptr[1].y)*0.9;
+        x_f = (v_ptr[0].X- v_ptr[1].X);
+        y_f = (v_ptr[0].Y - v_ptr[1].Y);
 
         rgba = clr;
         VBO = sur_VBO;
@@ -458,10 +461,26 @@ struct Grid {
 
         }
 
-        for (int i = 0; i < x_grids - 1;i++) {
-             for (int i = 0; i < ebo_stride;i++) {
-                 Ebo_sqre* ith_line = main_grid.x_lines[i].ebo;
+        // x lines with shortening lines along X are make thinner along Z and vice versa
+        
+        Vertex* vertx = (Vertex*)(data);
+        for (int i = 0; i < x_grids - 1; i++) {
+            Ebo_sqre* ith_line = (Ebo_sqre*)(main_grid.x_lines[i].ebo);
+             for (int k = 0; k < ebo_stride;k++) {
+                 Ebo_sqre sqre = ith_line[k];
+
+                 data[sqre.t1.v1].Z -= x_f; 
+                 data[sqre.t1.v2].Z -= x_f;
                  
+                 data[sqre.t1.v3].X += x_f;
+                 data[sqre.t2.v3].X += x_f;
+
+                 data[sqre.t1.v1].Y = 0.7;
+                 data[sqre.t1.v2].Y = 0.7;
+
+                 data[sqre.t1.v3].Y = 0.7;
+                 data[sqre.t2.v3].Y = 0.7;
+
              }
          }
 
@@ -482,13 +501,61 @@ struct Grid {
              }
          }
 
-       
+         // y lines width shortening
+         for (int i = 0; i < y_sz - 1; i++) {
+           
+             for (int k = 0; k < y_grids; k++) {
+                 
+                 Ebo_sqre sqre = (Ebo_sqre)main_grid.y_lines[i].ebo[k];
+                 
+                 /*float before[] = {
+                 
+                 vertx[sqre.t1.v1].X,
+                 vertx[sqre.t1.v2].X,
+                 vertx[sqre.t1.v3].X,
+                 vertx[sqre.t2.v1].X
+                 };
+                 */
+
+                 data[sqre.t1.v1].X += y_f;
+                 data[sqre.t1.v3].X += y_f;
+
+                 data[sqre.t2.v1].X -= y_f;
+                 data[sqre.t2.v3].X -= y_f;
+
+                 data[sqre.t1.v1].Y = .7;
+                 data[sqre.t1.v3].Y = .7;
+
+                 data[sqre.t2.v1].Y = .7;
+                 data[sqre.t2.v3].Y = .7;
+                 
+                 /* float after[] = {
+                 
+                 vertx[sqre.t1.v1].X,
+                 vertx[sqre.t1.v2].X,
+                 vertx[sqre.t1.v3].X,
+                 vertx[sqre.t2.v1].X
+                 };
+                 
+                 
+                 
+                 for (int i = 0; i < 4; i++)
+                  {
+                      std::cout << " | "<<before[i] << " | " << after[i] <<"  |  "<<before[i]-after[i] << "\n";
+                  }
+                 std::cout << "\n\n\n";*/
+             }
+         }
+
 
          coords_vao_setup<true,3,0> // Grid shares vbo from surface  
              (sur_VBO, EBO        ,GVAO       ,main_grid.ebo_arr(), main_grid.gl_ebo_sz());
 
        //  coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
         //     (sur_VBO, EBO, GVAO, side_grid.ebo_arr(), side_grid.gl_ebo_sz());
+
+
+         std::cout << "grid constructor complete \n";
     }
     
     void draw() {
@@ -523,7 +590,7 @@ struct SurfaceGrid {
 
     SurfaceGrid(GLSurfaceHandel<x_sz, y_sz> sur_handel) {
 
-        major_grid = MajorGridT(sur_handel.surPtr->gl_arr(), sur_handel.VBO,
+        major_grid = MajorGridT(sur_handel.surPtr->arr, sur_handel.VBO,
                                 sur_handel.surPtr->gl_ebo_arr(),
                                 glm::vec4(1)  );
 
