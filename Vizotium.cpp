@@ -191,13 +191,16 @@ void main()
 #version 330 core
 
 layout(location = 0) in vec3 coords;
+layout(location = 1) in vec3 coords_side;
 
 uniform mat4 MVP;
 uniform float t;
 uniform float f;
+uniform float factr;
 uniform bool is_grid;
 
 out vec3 fragPos;
+out vec3 sidePos;
 
 float gauss(float x)
 {
@@ -206,26 +209,43 @@ float gauss(float x)
 
 void main()
 {
-    vec3 pos = coords;
-    
-    float dis = length(coords.xz);
+ vec3 pos = coords;
+vec3 side_pos = coords_side;
 
-    
-    pos.y = gauss(dis) * cos(f * dis - t);
-    vec4 Pos = MVP * vec4(pos, 1.0);
+float r = length(pos.xz);
+float theta = atan(pos.z, pos.x);
+
+// Fade the spiral arms in from the center
+float centerFade = 1.0 - exp(-8.0 * r * r);
+
+float phase = 4.0 * theta * centerFade - 5.0 * r + 1.5 * t;
+
+pos.y = 0.65 * exp(-0.6 * r) * sin(phase);
+
+vec4 Pos = MVP * vec4(pos, 1.0);
 
     fragPos = pos;
-   /* if (is_grid) {
+    sidePos = coords_side;
+    if (is_grid) {
         Pos.y += 0.001;
-    }*/
+        Pos.x = Pos.x + (side_pos.x- Pos.x*(1+factr) ) ;
+    }
+
     gl_Position = Pos;
 }
 )";
+    const char* grid_vertex_shader = R"(
+#version 330 core
+layout(location = 0) in vec3 coords_draw;
+layout(location = 1) in vec3 coords_side;
 
+
+)";
     const char* fragment_shader = R"(
 #version 330 core
 
 in vec3 fragPos;
+in vec3 sidePos;
 out vec4 FragColor;
 
 uniform bool is_grid;
@@ -255,6 +275,8 @@ void main()
     GLuint t_Loc = glGetUniformLocation(program, "t");
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
+    GLuint factr_Loc = glGetUniformLocation(program, "factr");
+    glUniform1f(factr_Loc, 0.1);
     is_gridLoc = glGetUniformLocation(program, "is_grid");
     grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
@@ -291,11 +313,14 @@ void main()
         }
 
        
-        /*glEnable(GL_POLYGON_OFFSET_FILL);
+       /* glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.0,-1.0);
         */
-        gl_grid.draw();
+        
+       
         gl_surface.draw();
+        gl_grid.draw();
+
         glfwSwapBuffers(window);
 
         glfwPollEvents();

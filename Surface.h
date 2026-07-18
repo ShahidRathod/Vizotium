@@ -314,7 +314,7 @@ inline float fn(float a, float b) {
     return std::sin(a * b);
 }
 
-template <bool shared_vbo>
+template <bool shared_vbo,int coords_len,int loc>
 inline void coords_vao_setup
 (GLuint& vboid, GLuint& eboid, GLuint& vaoid,  int* ebo_arr, int ebo_sz , float* vbo_arr = nullptr, int vbo_sz=0) {
 
@@ -344,11 +344,11 @@ inline void coords_vao_setup
     // (x,y,z) cartisian coordiates
 
     glVertexAttribPointer(
-        0,
-        3,
+        loc,
+        coords_len,
         GL_FLOAT,
         GL_FALSE,
-        3 * sizeof(float),
+        coords_len * sizeof(float),
         nullptr
     ); 
 
@@ -362,7 +362,7 @@ struct GLSurfaceHandel {
 
     GLSurfaceHandel(Surface <x_sz, y_sz>* sur) {
         surPtr = sur;
-        coords_vao_setup<false>(VBO,EBO,VAO, 
+        coords_vao_setup<false,3,0>(VBO,EBO,VAO, 
             surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz(), surPtr->gl_arr(), surPtr->gl_vbo_sz());
       
     }
@@ -386,9 +386,15 @@ struct GLSurfaceHandel {
 
 // each grid cell contains the nth x line and nth y line 
 
+
+Ebo_sqre sqre_mirror(Ebo_sqre sq) {
+    return {sq.t2,sq.t1};
+}
+
 template <int len>
 struct GridCell{
     Ebo_sqre ebo[len];
+
 };
 
 template <int line_intervl,int line_width, int x_sz, int y_sz >
@@ -404,35 +410,45 @@ struct Grid {
     static constexpr int ebo_stride = x_sz - 1;
     glm::vec4 rgba;
 
+    GLuint VBO, GVAO, EBO,G_SIDE_VAO, G_SIDE_EBO;
+
     GridCell<ebo_stride> x_lines[x_grid_len];
     GridCell<y_grid_len> y_lines[ebo_stride]; 
     
-    GLuint VBO,VAO, EBO;
+    GridCell<ebo_stride> x_lines_side[x_grid_len];
+    GridCell<y_grid_len> y_lines_side[ebo_stride];
 
     Grid() {}
 
-    Grid(GLuint sur_VBO, int *ebo_arr, glm::vec4 clr) {
+    Grid(GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
         rgba = clr;
         VBO = sur_VBO;
 
         GridCell<ebo_stride>* grid_ptr = (GridCell<ebo_stride>*)(ebo_arr);
 
-         for (int i = 0; i < x_grid_len;i++) {
+         for (int i = 0; i < x_grid_len-1;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
             Ebo_sqre* ith_line = x_lines[i].ebo;
-            memcpy(ith_line, &grid_ptr[(i+1) * line_intervl], sizeof(Ebo_sqre) * (y_sz-1));
-        }
-       
-        for (int i = 0; i < x_sz; i++) {
-             for (int k = 0; k < y_grid_len; k++)
-             {
-                 y_lines[i].ebo[k] = grid_ptr[i].ebo[(k+1) * line_intervl];
+            Ebo_sqre* ith_side = x_lines_side[i].ebo;
 
+            memcpy(ith_line, &grid_ptr[(i + 1) * line_intervl], sizeof(Ebo_sqre) * ebo_stride);
+            for (int i = 0; i < ebo_stride;i++) ith_side[i] = sqre_mirror(ith_line[i]);
+
+        }
+      
+         for (int i = 0; i < x_sz - 1; i++) {
+             for (int k = 0; k < y_grid_len; k++){
+
+                 y_lines[i].ebo[k] = grid_ptr[i].ebo[(k + 1) * line_intervl];
+                 y_lines_side[i].ebo[k] = sqre_mirror(y_lines[i].ebo[k]);
              }
          }
 
-         coords_vao_setup<true> // Grid shares vbo from surface  
-             (VBO, VAO, EBO, gl_ebo_arr(), gl_ebo_sz());
+         coords_vao_setup<true,3,0> // Grid shares vbo from surface  
+             (sur_VBO, EBO,GVAO, gl_ebo_arr(), gl_ebo_sz());
+
+         coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
+             (sur_VBO, G_SIDE_EBO, G_SIDE_VAO, gl_ebo_arr(), gl_ebo_sz());
     }
     
     void draw() {
@@ -440,7 +456,7 @@ struct Grid {
         glUniform4fv(grid_clrLoc, 1, glm::value_ptr(rgba));
         glUniform1i(is_gridLoc, true);
 
-        glBindVertexArray(VAO);
+        glBindVertexArray(GVAO);
 
         glDrawElements(
             GL_TRIANGLES,
@@ -459,11 +475,11 @@ struct Grid {
 template <int line_intervl, int line_width ,int x_sz, int y_sz >
 struct SurfaceGrid {
     
-    using MinorGridT = Grid <line_intervl/2, line_width * 3, x_sz, y_sz>;
-    using MajorGridT = Grid <line_intervl, line_width, x_sz, y_sz>;
-    
+    using MajorGridT = Grid <line_intervl, line_width , x_sz, y_sz>;
+    //using MinorGridT = Grid <line_intervl/2, line_width, x_sz, y_sz>;
+
     MajorGridT major_grid{};
-    MinorGridT minor_grid{}; 
+    //MinorGridT minor_grid{};
 
     SurfaceGrid(GLSurfaceHandel<x_sz, y_sz> sur_handel) {
 
@@ -471,15 +487,15 @@ struct SurfaceGrid {
                                 sur_handel.surPtr->gl_ebo_arr(),
                                 glm::vec4(1)  );
 
-        minor_grid = MinorGridT( sur_handel.VBO,
-                                 sur_handel.surPtr->gl_ebo_arr(),
-                                 glm::vec4(1) );
+        //minor_grid = MinorGridT(sur_handel.VBO,
+        //                        sur_handel.surPtr->gl_ebo_arr(),
+        //                       glm::vec4(1) );
 
     }
 
     void draw() {
         major_grid.draw();
-        minor_grid.draw();
+       // minor_grid.draw();
     }
  
 }; 
