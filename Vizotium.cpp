@@ -206,29 +206,41 @@ float gauss(float x)
 {
     return exp(-x);
 }
+float spiral_y (vec3 p) {
+ 
+    float r = length(p.xz);
+    float theta = atan(p.z, p.x);
+
+    float centerFade = 1.0 - exp(-8.0 * r * r);
+
+    float phase = 4.0 * theta * centerFade - 5.0 * r + 1.5 * t;
+    return 0.65 * exp(-0.6 * r) * sin(phase);   
+}
+
+
 
 void main()
 {
- vec3 pos = coords;
+
+vec3 pos = coords;
 vec3 side_pos = coords_side;
+pos.y = spiral_y(pos);
+side_pos.y = spiral_y(side_pos);
 
-float r = length(pos.xz);
-float theta = atan(pos.z, pos.x);
+if (is_grid) {
+         pos.xz = mix(pos.xz, side_pos.xz, factr);
+         
+}
 
-// Fade the spiral arms in from the center
-float centerFade = 1.0 - exp(-8.0 * r * r);
-
-float phase = 4.0 * theta * centerFade - 5.0 * r + 1.5 * t;
-
-pos.y = 0.65 * exp(-0.6 * r) * sin(phase);
 
 vec4 Pos = MVP * vec4(pos, 1.0);
 
     fragPos = pos;
     sidePos = coords_side;
+    
+
     if (is_grid) {
         Pos.y += 0.001;
-        Pos.x = Pos.x + (side_pos.x- Pos.x*(1+factr) ) ;
     }
 
     gl_Position = Pos;
@@ -276,7 +288,7 @@ void main()
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
     GLuint factr_Loc = glGetUniformLocation(program, "factr");
-    glUniform1f(factr_Loc, 0.1);
+    glUniform1f(factr_Loc, 0.9);
     is_gridLoc = glGetUniformLocation(program, "is_grid");
     grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
@@ -312,12 +324,12 @@ void main()
             inp = false;
         }
 
-       
-       /* glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0,-1.0);
-        */
-        
-       
+
+        /* glEnable(GL_POLYGON_OFFSET_FILL);
+         glPolygonOffset(1.0,-1.0);
+         */
+
+
         gl_surface.draw();
         gl_grid.draw();
 

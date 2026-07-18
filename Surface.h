@@ -352,7 +352,7 @@ inline void coords_vao_setup
         nullptr
     ); 
 
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(loc);
 }
 
 template <int x_sz, int y_sz>
@@ -388,13 +388,25 @@ struct GLSurfaceHandel {
 
 
 Ebo_sqre sqre_mirror(Ebo_sqre sq) {
-    return {sq.t2,sq.t1};
+    return Ebo_sqre{sq.t2,sq.t1};
 }
 
 template <int len>
 struct GridCell{
     Ebo_sqre ebo[len];
 
+};
+
+template <int x_n,int y_n,int x_sz,int y_sz>
+struct GridEbo{
+
+    GridCell<x_sz-1> x_lines[x_n];
+    GridCell<y_n> y_lines[y_sz-1];
+
+    int* ebo_arr() {
+        return reinterpret_cast<int*> (x_lines);
+    }
+    int gl_ebo_sz() { return sizeof(x_lines) + sizeof(y_lines); }
 };
 
 template <int line_intervl,int line_width, int x_sz, int y_sz >
@@ -405,18 +417,15 @@ struct Grid {
     // note the number of square in a surface<x_sz y_sz> is (x_sz-1)*(y_sz-1);
    
 
-    static constexpr int x_grid_len = (x_sz - 1) / line_intervl;
-    static constexpr int y_grid_len = (y_sz - 1) / line_intervl;
+    static constexpr int x_grids = (y_sz - 1) / line_intervl;
+    static constexpr int y_grids = (x_sz - 1) / line_intervl;
     static constexpr int ebo_stride = x_sz - 1;
     glm::vec4 rgba;
 
     GLuint VBO, GVAO, EBO,G_SIDE_VAO, G_SIDE_EBO;
-
-    GridCell<ebo_stride> x_lines[x_grid_len];
-    GridCell<y_grid_len> y_lines[ebo_stride]; 
-    
-    GridCell<ebo_stride> x_lines_side[x_grid_len];
-    GridCell<y_grid_len> y_lines_side[ebo_stride];
+    using GridT = GridEbo< x_grids, y_grids,x_sz,y_sz>;
+    GridT main_grid;
+    GridT side_grid;
 
     Grid() {}
 
@@ -425,34 +434,45 @@ struct Grid {
         VBO = sur_VBO;
 
         GridCell<ebo_stride>* grid_ptr = (GridCell<ebo_stride>*)(ebo_arr);
+         
+         // x_grid-1 and (i+1) in the loop because
+         // we dont first and last , we dont want the edges
+        
 
-         for (int i = 0; i < x_grid_len-1;i++) {
+         // GridCell<x_sz - 1> x_lines[x_n];
+     
+         for (int i = 0; i < x_grids-1 ;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
-            Ebo_sqre* ith_line = x_lines[i].ebo;
-            Ebo_sqre* ith_side = x_lines_side[i].ebo;
+            Ebo_sqre* ith_line = main_grid.x_lines[i].ebo;
+            Ebo_sqre* ith_side = side_grid.x_lines[i].ebo;
 
             memcpy(ith_line, &grid_ptr[(i + 1) * line_intervl], sizeof(Ebo_sqre) * ebo_stride);
             for (int i = 0; i < ebo_stride;i++) ith_side[i] = sqre_mirror(ith_line[i]);
 
         }
-      
-         for (int i = 0; i < x_sz - 1; i++) {
-             for (int k = 0; k < y_grid_len; k++){
 
-                 y_lines[i].ebo[k] = grid_ptr[i].ebo[(k + 1) * line_intervl];
-                 y_lines_side[i].ebo[k] = sqre_mirror(y_lines[i].ebo[k]);
+         //GridCell<y_n> y_lines [y_sz-1];
+         // both the x lines and y lines oriented horizontally 
+         // the line_interval is between the x_lines<x_sz-1>
+         // the line_interval is between the elements of a given y_lines <y_n>
+
+         for (int i = 0; i < y_sz-1 ; i++) {
+             for (int k = 0; k < y_grids ; k++){
+                 
+                 main_grid.y_lines[i].ebo[k] = grid_ptr[i].ebo[(k + 1) * line_intervl];
+                 side_grid.y_lines[i].ebo[k] = sqre_mirror(main_grid.y_lines[i].ebo[k]);
              }
          }
 
          coords_vao_setup<true,3,0> // Grid shares vbo from surface  
-             (sur_VBO, EBO,GVAO, gl_ebo_arr(), gl_ebo_sz());
+             (sur_VBO, EBO        ,GVAO       ,main_grid.ebo_arr(), main_grid.gl_ebo_sz());
 
-         coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
-             (sur_VBO, G_SIDE_EBO, G_SIDE_VAO, gl_ebo_arr(), gl_ebo_sz());
+       //  coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
+       //      (sur_VBO, G_SIDE_EBO, G_SIDE_VAO, side_grid.ebo_arr(), side_grid.gl_ebo_sz());
     }
     
     void draw() {
-
+        
         glUniform4fv(grid_clrLoc, 1, glm::value_ptr(rgba));
         glUniform1i(is_gridLoc, true);
 
@@ -460,16 +480,16 @@ struct Grid {
 
         glDrawElements(
             GL_TRIANGLES,
-            gl_ebo_count(),
+            draw_count(),
             GL_UNSIGNED_INT,
             (void*)(0)
         );
     }
 
-    int* gl_ebo_arr() { return reinterpret_cast<int*> (x_lines); }
-    int gl_ebo_sz() { return sizeof(x_lines)+sizeof(y_lines); }
-    int gl_ebo_count() {return 6*gl_ebo_sz() / sizeof(Ebo_sqre); }
-
+  
+    int draw_count() {
+        return main_grid.gl_ebo_sz() / sizeof(Ebo_tringl);
+    }
 };
 
 template <int line_intervl, int line_width ,int x_sz, int y_sz >
