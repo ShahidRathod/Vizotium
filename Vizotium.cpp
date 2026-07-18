@@ -288,7 +288,7 @@ void main()
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
     GLuint factr_Loc = glGetUniformLocation(program, "factr");
-    glUniform1f(factr_Loc, 0.9);
+    
     is_gridLoc = glGetUniformLocation(program, "is_grid");
     grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
@@ -305,6 +305,7 @@ void main()
     static SurfaceGrid<XSZ / 10, 2, XSZ, YSZ> gl_grid{ gl_surface };
 
     glUseProgram(program);
+
     glEnable(GL_DEPTH_TEST);
 
     while (!glfwWindowShouldClose(window)) {

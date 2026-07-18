@@ -416,7 +416,8 @@ struct Grid {
     
     // note the number of square in a surface<x_sz y_sz> is (x_sz-1)*(y_sz-1);
    
-
+    float x_f;
+    float y_f;
     static constexpr int x_grids = (y_sz - 1) / line_intervl;
     static constexpr int y_grids = (x_sz - 1) / line_intervl;
     static constexpr int ebo_stride = x_sz - 1;
@@ -429,7 +430,11 @@ struct Grid {
 
     Grid() {}
 
-    Grid(GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
+    Grid(float* data ,GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
+        Vertex* v_ptr = (Vertex*)(data);
+        x_f = (v_ptr[0].x - v_ptr[1].x)*0.9;
+        y_f = (v_ptr[0].y - v_ptr[1].y)*0.9;
+
         rgba = clr;
         VBO = sur_VBO;
 
@@ -447,28 +452,43 @@ struct Grid {
             Ebo_sqre* ith_side = side_grid.x_lines[i].ebo;
 
             memcpy(ith_line, &grid_ptr[(i + 1) * line_intervl], sizeof(Ebo_sqre) * ebo_stride);
-            for (int i = 0; i < ebo_stride;i++) ith_side[i] = sqre_mirror(ith_line[i]);
+            for (int i = 0; i < ebo_stride;i++) { 
+                ith_side[i] = sqre_mirror(ith_line[i]);
+            }
 
         }
 
+        for (int i = 0; i < x_grids - 1;i++) {
+             for (int i = 0; i < ebo_stride;i++) {
+                 Ebo_sqre* ith_line = main_grid.x_lines[i].ebo;
+                 
+             }
+         }
+
+
          //GridCell<y_n> y_lines [y_sz-1];
-         // both the x lines and y lines oriented horizontally 
-         // the line_interval is between the x_lines<x_sz-1>
-         // the line_interval is between the elements of a given y_lines <y_n>
+         // architecture intent of y_lines:
+         // unlike x_lines the every Ebo_sqre of x_lines element is contagiously mapped to the 
+         // ebo array of surface . but in y lines teh required ebo_sqre elements are not contagious in memory but with interval is 
+         // the core amibiguity emiminator fact. wheather it's x_lines or y_lines for both them the actual rendering order is horizontal 
+         // always the grid ebo in a given veertical line is 
 
          for (int i = 0; i < y_sz-1 ; i++) {
              for (int k = 0; k < y_grids ; k++){
                  
                  main_grid.y_lines[i].ebo[k] = grid_ptr[i].ebo[(k + 1) * line_intervl];
                  side_grid.y_lines[i].ebo[k] = sqre_mirror(main_grid.y_lines[i].ebo[k]);
+
              }
          }
+
+       
 
          coords_vao_setup<true,3,0> // Grid shares vbo from surface  
              (sur_VBO, EBO        ,GVAO       ,main_grid.ebo_arr(), main_grid.gl_ebo_sz());
 
        //  coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
-       //      (sur_VBO, G_SIDE_EBO, G_SIDE_VAO, side_grid.ebo_arr(), side_grid.gl_ebo_sz());
+        //     (sur_VBO, EBO, GVAO, side_grid.ebo_arr(), side_grid.gl_ebo_sz());
     }
     
     void draw() {
@@ -488,7 +508,7 @@ struct Grid {
 
   
     int draw_count() {
-        return main_grid.gl_ebo_sz() / sizeof(Ebo_tringl);
+        return main_grid.gl_ebo_sz() / sizeof(int);
     }
 };
 
@@ -503,7 +523,7 @@ struct SurfaceGrid {
 
     SurfaceGrid(GLSurfaceHandel<x_sz, y_sz> sur_handel) {
 
-        major_grid = MajorGridT(sur_handel.VBO, 
+        major_grid = MajorGridT(sur_handel.surPtr->gl_arr(), sur_handel.VBO,
                                 sur_handel.surPtr->gl_ebo_arr(),
                                 glm::vec4(1)  );
 
