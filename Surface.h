@@ -436,8 +436,8 @@ struct Grid {
     Grid(Vertex* data ,GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
 
         Vertex* v_ptr = (Vertex*)(data);
-        x_f = (v_ptr[1].X - v_ptr[0].X)*0.2;
-        z_f = (v_ptr[0].Z - v_ptr[x_sz].Z)*0.2;
+        x_f = (v_ptr[1].X - v_ptr[0].X)*0.19;
+        z_f = (v_ptr[0].Z - v_ptr[x_sz].Z)*0.19;
 
         rgba = clr;
         VBO = sur_VBO; 

@@ -1,9 +1,12 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
+#include "Shapes.h"
 #include <cstdlib>
 #include <iostream>
 #include "Surface.h"
+#include "ShaderLoader.h"
+
 
 using std::cerr;
 using std::cout;
@@ -59,7 +62,7 @@ struct TimeObj {
     bool status = true;
     float time_stmp = 0;
     void stop_start() { 
-        if (time_stmp >= inc * 50) {
+        if (time_stmp >= inc * 10) {
             status = !status;
             time_stmp = 0;
         }
@@ -88,6 +91,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 GLFWwindow* make_window() {
     if (!glfwInit()) std::exit(EXIT_FAILURE);
 
+    glfwWindowHint(GLFW_SAMPLES, 8); 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -193,20 +197,7 @@ GLuint grid_clrLoc;
 int main()
 
 {
-    /*const char* grid_shader = R"(
-
-#version 330 core
-in vec3 fragPos;
-out vec4 FragColor;
-
-void main()
-{
-   FragColor = vec4(fragPos.y,.2,1-fragPos.y,1);
-
-}
-)";
-*/
-
+  
     const char* vertex_shader = R"(
 #version 330 core
 
@@ -218,6 +209,9 @@ uniform float t;
 uniform float f;
 uniform float factr;
 uniform bool is_grid;
+
+uniform int XSZ;
+uniform int YSZ;
 
 out vec3 fragPos;
 out vec3 sidePos;
@@ -242,14 +236,16 @@ float spiral_y (vec3 p) {
 
 void main()
 {
- 
+
+int x  = gl_VertexID;
+
+
 vec3 pos = coords;
 vec3 side_pos = coords_side;
 
-side_pos.y = spiral_y(side_pos);
+side_pos.y = spiral_y(side_pos)/2;
 
-   
-pos.y = spiral_y(pos);
+pos.y = spiral_y(pos)/2;
 
 if (is_grid) {
         pos.y += 0.001;
@@ -292,14 +288,16 @@ void main()
      FragColor = grid_clr;
     
    }else {
-     float h = fragPos.y;
-     FragColor = vec4(h+h*h + h*h*h,.2, 1-.5*exp(h),1);
+     float h = 2.5*fragPos.y;
+     FragColor = vec4(h+h*h + 3*h*h*h, 0.8 - h*h, 1-0.5*exp(h),0.5);
  
     }
 }
 )";
-
+    
     mat_debug = false;
+    
+    
     GLFWwindow* window = make_window();
 
     GLuint program = create_program(vertex_shader, fragment_shader);
@@ -311,7 +309,10 @@ void main()
     GLuint f_Loc = glGetUniformLocation(program, "f");
 
     GLuint factr_Loc = glGetUniformLocation(program, "factr");
-    
+
+    GLuint xsz_Loc = glGetUniformLocation(program, "XSZ");
+    GLuint ysz_Loc = glGetUniformLocation(program, "YSZ");
+
     is_gridLoc = glGetUniformLocation(program, "is_grid");
     grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
@@ -321,16 +322,18 @@ void main()
     float freq = 2 * PI;  // freqency
 
     update_MVP_n_send(mvpLoc);
-
+    //UPLOADING UNIFROMS
     glUniform1f(f_Loc, freq);
 
     static GLSurfaceHandel<XSZ, YSZ> gl_surface{ &sur };
     static SurfaceGrid<XSZ / 10, 2, XSZ, YSZ> gl_grid{ gl_surface };
 
     glUseProgram(program);
-
+    glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
-
+    GLint samples;
+    glGetIntegerv(GL_SAMPLES, &samples);
+    std::cout << "MSAA samples = " << samples << '\n';
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
