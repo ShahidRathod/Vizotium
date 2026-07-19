@@ -215,8 +215,8 @@ public:
 
     Surface(const float c_x, const float c_y, const float x, const float y) {
         float x_st = c_x - x;
-        float y_st = c_y - y;
-        float y_inc = 2 * y / (y_sz - 1);  // -1 because n-1 cordinated away from last cordinate
+        float y_st = c_x - x;
+        float y_inc = 2 * x / (y_sz - 1);  // -1 because n-1 cordinated away from last cordinate
         float x_inc = 2 * x / (x_sz - 1);
 
         /// Eb array insitialization 
@@ -316,13 +316,10 @@ inline float fn(float a, float b) {
     return std::sin(a * b);
 }
 
-template <bool shared_vbo,int coords_len,int loc>
+template <bool buffer_data,int coords_len,int loc>
 inline void coords_vao_setup
 (GLuint& vboid, GLuint& eboid, GLuint& vaoid,  int* ebo_arr, int ebo_sz , float* vbo_arr = nullptr, int vbo_sz=0) {
 
-    if constexpr (!shared_vbo) {
-        glGenBuffers(1, &vboid);
-    }
 
     glGenBuffers(1, &eboid);
     glGenVertexArrays(1,&vaoid);
@@ -332,7 +329,7 @@ inline void coords_vao_setup
     glBindBuffer(GL_ARRAY_BUFFER,vboid); // Shared or not - we always make the
                                          // VBObuffer of vboid in the current context. 
 
-    if constexpr (!shared_vbo) {
+    if constexpr (buffer_data) {
         glBufferData(GL_ARRAY_BUFFER, vbo_sz, vbo_arr,GL_STATIC_DRAW);
     }
 
@@ -364,9 +361,13 @@ struct GLSurfaceHandel {
 
     GLSurfaceHandel(Surface <x_sz, y_sz>* sur) {
         surPtr = sur;
+        glGenBuffers(1, &VBO);
         coords_vao_setup<false,3,0>(VBO,EBO,VAO, 
-            surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz(), surPtr->gl_arr(), surPtr->gl_vbo_sz());
+            surPtr->gl_ebo_arr(), surPtr->gl_ebo_sz());
       
+    }
+    void commit_vbo() {
+        glBufferData(GL_ARRAY_BUFFER, surPtr->gl_vbo_sz(), surPtr->gl_arr(), GL_STATIC_DRAW);
     }
 
     void draw() {
@@ -419,7 +420,7 @@ struct Grid {
     // note the number of square in a surface<x_sz y_sz> is (x_sz-1)*(y_sz-1);
    
     float x_f;
-    float y_f;
+    float z_f;
     static constexpr int x_grids = (y_sz - 1) / line_intervl;
     static constexpr int y_grids = (x_sz - 1) / line_intervl;
     static constexpr int ebo_stride = x_sz - 1;
@@ -435,11 +436,11 @@ struct Grid {
     Grid(Vertex* data ,GLuint sur_VBO , int *ebo_arr, glm::vec4 clr) {
 
         Vertex* v_ptr = (Vertex*)(data);
-        x_f = (v_ptr[0].X- v_ptr[1].X);
-        y_f = (v_ptr[0].Y - v_ptr[1].Y);
+        x_f = (v_ptr[1].X - v_ptr[0].X)*0.2;
+        z_f = (v_ptr[0].Z - v_ptr[x_sz].Z)*0.2;
 
         rgba = clr;
-        VBO = sur_VBO;
+        VBO = sur_VBO; 
 
         GridCell<ebo_stride>* grid_ptr = (GridCell<ebo_stride>*)(ebo_arr);
          
@@ -449,7 +450,7 @@ struct Grid {
 
          // GridCell<x_sz - 1> x_lines[x_n];
      
-         for (int i = 0; i < x_grids-1 ;i++) {
+         for (int i = 0; i < x_grids ;i++) {
             //  x_lines[i].ebo = grid_ptr[i * line_intervl];
             Ebo_sqre* ith_line = main_grid.x_lines[i].ebo;
             Ebo_sqre* ith_side = side_grid.x_lines[i].ebo;
@@ -464,22 +465,16 @@ struct Grid {
         // x lines with shortening lines along X are make thinner along Z and vice versa
         
         Vertex* vertx = (Vertex*)(data);
-        for (int i = 0; i < x_grids - 1; i++) {
+        for (int i = 0; i < x_grids ; i++) {
             Ebo_sqre* ith_line = (Ebo_sqre*)(main_grid.x_lines[i].ebo);
              for (int k = 0; k < ebo_stride;k++) {
                  Ebo_sqre sqre = ith_line[k];
 
-                 data[sqre.t1.v1].Z -= x_f; 
-                 data[sqre.t1.v2].Z -= x_f;
+                 data[sqre.t1.v1].Z -= z_f; 
+                 data[sqre.t1.v2].Z -= z_f;
                  
-                 data[sqre.t1.v3].X += x_f;
-                 data[sqre.t2.v3].X += x_f;
-
-                 data[sqre.t1.v1].Y = 0.7;
-                 data[sqre.t1.v2].Y = 0.7;
-
-                 data[sqre.t1.v3].Y = 0.7;
-                 data[sqre.t2.v3].Y = 0.7;
+                 data[sqre.t1.v3].Z += z_f;
+                 data[sqre.t2.v3].Z += z_f;
 
              }
          }
@@ -502,6 +497,7 @@ struct Grid {
          }
 
          // y lines width shortening
+
          for (int i = 0; i < y_sz - 1; i++) {
            
              for (int k = 0; k < y_grids; k++) {
@@ -517,17 +513,11 @@ struct Grid {
                  };
                  */
 
-                 data[sqre.t1.v1].X += y_f;
-                 data[sqre.t1.v3].X += y_f;
+                 data[sqre.t1.v1].X += x_f;
+                 data[sqre.t1.v3].X += x_f;
 
-                 data[sqre.t2.v1].X -= y_f;
-                 data[sqre.t2.v3].X -= y_f;
-
-                 data[sqre.t1.v1].Y = .7;
-                 data[sqre.t1.v3].Y = .7;
-
-                 data[sqre.t2.v1].Y = .7;
-                 data[sqre.t2.v3].Y = .7;
+                 data[sqre.t2.v1].X -= x_f;
+                 data[sqre.t2.v3].X -= x_f;
                  
                  /* float after[] = {
                  
@@ -548,8 +538,13 @@ struct Grid {
          }
 
 
-         coords_vao_setup<true,3,0> // Grid shares vbo from surface  
-             (sur_VBO, EBO        ,GVAO       ,main_grid.ebo_arr(), main_grid.gl_ebo_sz());
+         coords_vao_setup<false,3,0> // Grid shares vbo from surface  
+             (sur_VBO,
+                 EBO,
+                 GVAO,
+                 main_grid.ebo_arr(),
+                 main_grid.gl_ebo_sz()
+             );
 
        //  coords_vao_setup<true, 3, 1> // side_Grid_coords shares vbo from surface  
         //     (sur_VBO, EBO, GVAO, side_grid.ebo_arr(), side_grid.gl_ebo_sz());
@@ -598,6 +593,7 @@ struct SurfaceGrid {
         //                        sur_handel.surPtr->gl_ebo_arr(),
         //                       glm::vec4(1) );
 
+        sur_handel.commit_vbo();
     }
 
     void draw() {

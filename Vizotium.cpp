@@ -53,6 +53,26 @@ GLuint create_program(const char* vs_src, const char* fs_src) {
 }
 
 Camera camera{};
+struct TimeObj {
+    float time = 0.0;
+    float inc = 0.01;
+    bool status = true;
+    float time_stmp = 0;
+    void stop_start() { 
+        if (time_stmp >= inc * 50) {
+            status = !status;
+            time_stmp = 0;
+        }
+     
+    }
+    void update () {
+        if (status) time += inc;
+        time_stmp += inc;
+    }
+ 
+};
+
+TimeObj Time{};
 
 void update_MVP_n_send(GLuint mvp_location) {
     glm::mat4 mvp = camera.update_MVP();
@@ -121,7 +141,7 @@ bool process_input(GLFWwindow* win, Camera& cam) {
         KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
 
         KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
-
+        KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
         return key_press;
 }
 
@@ -206,6 +226,7 @@ float gauss(float x)
 {
     return exp(-x);
 }
+
 float spiral_y (vec3 p) {
  
     float r = length(p.xz);
@@ -227,21 +248,25 @@ vec3 side_pos = coords_side;
 
 side_pos.y = spiral_y(side_pos);
 
+   
+pos.y = spiral_y(pos);
 
+if (is_grid) {
+        pos.y += 0.001;
+}
 vec4 Pos = MVP * vec4(pos, 1.0);
 
     fragPos = pos;
     sidePos = coords_side;
     
 
-    if (is_grid) {
-        Pos.y += 0.001;
-    }
     
    
     gl_Position = Pos;
 }
 )";
+
+
     const char* grid_vertex_shader = R"(
 #version 330 core
 layout(location = 0) in vec3 coords_draw;
@@ -249,6 +274,8 @@ layout(location = 1) in vec3 coords_side;
 
 
 )";
+
+
     const char* fragment_shader = R"(
 #version 330 core
 
@@ -272,12 +299,12 @@ void main()
 }
 )";
 
-    mat_debug = true;
+    mat_debug = false;
     GLFWwindow* window = make_window();
 
     GLuint program = create_program(vertex_shader, fragment_shader);
 
-    // UNIFORMS
+    // UNIFORMS 
 
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
     GLuint t_Loc = glGetUniformLocation(program, "t");
@@ -290,7 +317,7 @@ void main()
 
     glUseProgram(program);
 
-    float time = 0.0f;    // Time
+  
     float freq = 2 * PI;  // freqency
 
     update_MVP_n_send(mvpLoc);
@@ -310,8 +337,8 @@ void main()
 
         bool inp = process_input(window, camera);
 
-        glUniform1f(t_Loc, time);
-        time += 0.01;
+        glUniform1f(t_Loc, Time.time);
+        Time.update();
 
         if (inp) {
             if (mat_debug) CLEAR_SCREEN;
