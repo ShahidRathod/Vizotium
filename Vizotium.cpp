@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
@@ -194,109 +195,17 @@ enum class VertexIds : int { VAO, major_grid, minor_grid };
 GLuint is_gridLoc;
 GLuint grid_clrLoc;
 
-int main()
+int main(){
 
-{
-  
-    const char* vertex_shader = R"(
-#version 330 core
-
-layout(location = 0) in vec3 coords;
-layout(location = 1) in vec3 coords_side;
-
-uniform mat4 MVP;
-uniform float t;
-uniform float f;
-uniform float factr;
-uniform bool is_grid;
-
-uniform int XSZ;
-uniform int YSZ;
-
-out vec3 fragPos;
-out vec3 sidePos;
-
-float gauss(float x)
-{
-    return exp(-x);
-}
-
-float spiral_y (vec3 p) {
- 
-    float r = length(p.xz);
-    float theta = atan(p.z, p.x);
-
-    float centerFade = 1.0 - exp(-8.0 * r * r);
-
-    float phase = 4.0 * theta * centerFade - 5.0 * r + 1.5 * t;
-    return 0.65 * exp(-0.6 * r) * sin(phase);   
-}
-
-
-
-void main()
-{
-
-int x  = gl_VertexID;
-
-
-vec3 pos = coords;
-vec3 side_pos = coords_side;
-
-side_pos.y = spiral_y(side_pos)/2;
-
-pos.y = spiral_y(pos)/2;
-
-if (is_grid) {
-        pos.y += 0.001;
-}
-vec4 Pos = MVP * vec4(pos, 1.0);
-
-    fragPos = pos;
-    sidePos = coords_side;
-    
-
-    
-   
-    gl_Position = Pos;
-}
-)";
-
-
-    const char* grid_vertex_shader = R"(
-#version 330 core
-layout(location = 0) in vec3 coords_draw;
-layout(location = 1) in vec3 coords_side;
-
-
-)";
-
-
-    const char* fragment_shader = R"(
-#version 330 core
-
-in vec3 fragPos;
-in vec3 sidePos;
-out vec4 FragColor;
-
-uniform bool is_grid;
-uniform vec4 grid_clr;
-
-void main()
-{
-   if (is_grid){
-     FragColor = grid_clr;
-    
-   }else {
-     float h = 2.5*fragPos.y;
-     FragColor = vec4(h+h*h + 3*h*h*h, 0.8 - h*h, 1-0.5*exp(h),0.5);
- 
-    }
-}
-)";
     
     mat_debug = false;
     
+
+    ShaderReader<1000, 2> shader_reader("shaders.h");
+
+    //SHADER LOADING
+    char* vertex_shader = shader_reader["surface"]["vertex"];
+    char* fragment_shader = shader_reader["surface"]["fragment"];
     
     GLFWwindow* window = make_window();
 
@@ -352,9 +261,9 @@ void main()
         }
 
 
-        /* glEnable(GL_POLYGON_OFFSET_FILL);
+         glEnable(GL_POLYGON_OFFSET_FILL);
          glPolygonOffset(1.0,-1.0);
-         */
+         
 
 
         gl_surface.draw();
@@ -370,4 +279,6 @@ void main()
     glfwTerminate();
 
     return 0;
+
+    
 }

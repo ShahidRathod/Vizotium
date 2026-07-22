@@ -208,17 +208,20 @@ public:
     constexpr static int size = x_sz * y_sz;
     constexpr static int ebo_sqre_sz = (x_sz - 1) * (y_sz - 1);
     constexpr static int ebo_sz = ebo_sqre_sz * 6;
+    
+    float inc;
 
     Ebo_sqre ebo_arr[ebo_sqre_sz];
     Vertex arr[size];
 
 
     Surface(const float c_x, const float c_y, const float x, const float y) {
+      
         float x_st = c_x - x;
         float y_st = c_x - x;
         float y_inc = 2 * x / (y_sz - 1);  // -1 because n-1 cordinated away from last cordinate
         float x_inc = 2 * x / (x_sz - 1);
-
+        float inc = x_inc;
         /// Eb array insitialization 
         int ebo_stride = x_sz - 1; 
 

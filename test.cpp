@@ -126,6 +126,10 @@ template <int b_sz, int n> struct ShaderReader {
     int sz = 0;
     bool skip_newln = true;
 
+    // this is a fix to a deterministic anamoly 
+    // in read content the every newline cha
+    int new_ln_fix = 0;
+
     ShaderHandel* curnt_element = handel;
     int curnt_indx = 0;
     FILE* file;
@@ -137,8 +141,11 @@ template <int b_sz, int n> struct ShaderReader {
         if (strcmp(delim_tkn + delim_len - 2, R"(\\)") == 0) {
             at_comnt = true;
         }
+
         if (cursr == '\n') {
+
             ln_no++;
+            new_ln_fix++;
             at_comnt = false;
         }
 
@@ -262,7 +269,9 @@ template <int b_sz, int n> struct ShaderReader {
 
                 std::cout << "active shader: "
                     << curnt_element->active_shaders[type_indx] << "\n";
+                std::cout << "active shader profile: \n";
 
+                
                 if ((curnt_element->active_shaders[type_indx]++) > 1) {
                     PRINT_EXIT("Shader: "
                         << name_buff << " Element: " << curnt_element->name
@@ -271,35 +280,35 @@ template <int b_sz, int n> struct ShaderReader {
                         << curnt_element->shdr_line_no[2 * type_indx + 1]
                         << ")");
                 }
+                for (int i = 0; i < stage_count; i++) std::cout << subtag_names[i] << ": " << curnt_element->active_shaders[i] << "\n";
 
                 std::cout << type_indx << "<-typeindx\n";
 
                 read_content(type_indx, name_buff);
             }
         }
-    }
+    }       
 
-  
+
 
     int read_content(int type_indx, char* opn_shdr_tg) {
+        new_ln_fix = 0;
         long cntn_strt = ftell(file) - 1;
         bool cls_found = false;
-        while ((cursr != '<' || at_comnt) && cursr != EOF) {
 
-  
+        while ((cursr != '<' || at_comnt) && cursr != EOF) {
             get_nxt();
         }
 
         long cntn_end = ftell(file) - 1;
         long tg_strt = ftell(file);
-        long len = cntn_end - cntn_strt;
+        long len = cntn_end - cntn_strt - new_ln_fix;
 
         get_nxt();
 
         if (!skip_whitespc() && cursr != '/') {
             PRINT_EXIT("Exprected a closing tag Maybe you forgot '/'\n");
         }
-
 
         get_nxt(); // to make the cursr past the '/' charater 
         //because in the cpt_tag_name_at has skip_whitepsc 
@@ -326,15 +335,13 @@ template <int b_sz, int n> struct ShaderReader {
             PRINT_EXIT("INSUFFICIENT SPACE \n");
         }
 
-     
         fseek(file, cntn_strt, SEEK_SET);
-  
-
         size_t sz = fread(write_ptr, sizeof(char), len, file);
-        write_ptr[sz / sizeof(char)] = '\0';
-    
+
+        write_ptr[(sz) / sizeof(char)] = '\0';
+
         fseek(file, tg_end, SEEK_SET);
-   
+
         std::cout << "[write]" << write_ptr << "[write]\n";
         write_ptr += len + 1;
         curnt_element->shadr_ptrs[type_indx] = write_ptr;
@@ -358,7 +365,7 @@ template <int b_sz, int n> struct ShaderReader {
         //  whitespc
         // else the isspace(cursr = 0) == false and loop will not
         // continue and nxt_token_tag is get cursr as 0 and its not
-        // '<' out error
+        // '<' out error 
 
         for (int shader_indx = 0; shader_indx < n; shader_indx++) {
             skip_whitespc();
@@ -398,20 +405,16 @@ template <int b_sz, int n> struct ShaderReader {
 char* ShaderHandel::operator[](const char* shdr) {
     int indx = check_subtag(shdr);
     if (active_shaders[indx] == 0) {
-        PRINT_EXIT_NO_LINE(shdr << "is not a active shader of" << name);
+        PRINT_EXIT_NO_LINE(shdr << " is not a active shader of " << name);
     }
     return shadr_ptrs[indx];
 }
- 
+
+
 int main() {
 
-    for (int i = 0; i < stage_count; i++)
-        std::cout << subtag_names[i] << strlen(subtag_names[i]) << "\n";
+    ShaderReader<1000,2> reader("shaders.h");
 
 
-    ShaderReader<200, 2> sr("shaders.txt");
-   // std::cout << sr["shader_1"]["vert"];
-
-    std::cout << "code compiled";
+    std::cout << "\n\n[program completed]";
 }
-
