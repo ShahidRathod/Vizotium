@@ -113,7 +113,16 @@ accepting that mastery accumulates from thousands of small corrections.
 In that sense, persistence is less about willpower and more about consistently investing effort over long timescales while adapting to new evidence.
 
 
+[Ideal vector pool] 24/07/26
 
+What CPU feeds to GPU : 
 
+- base vector mesh 
+- vector { vec3 head,tail } * number of vectors;
+- EBO indexing for vector mesh. do not compute the vector mesh using the ebo since that will redundant with each draw call or iteration over complete mesh 
+
+how much mesh is reduced by ebo 
+- proportional to number of coordinates used for circle. exactly ((8*N)* (sizeof(float)-2)) use glUnsinged short or even byte 
+- 
 
 

@@ -2,9 +2,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
-#include "Shapes.h"
 #include <cstdlib>
 #include <iostream>
+#include "Shapes.h"
 #include "Surface.h"
 #include "ShaderLoader.h"
 
@@ -62,18 +62,18 @@ struct TimeObj {
     float inc = 0.01;
     bool status = true;
     float time_stmp = 0;
-    void stop_start() { 
+    void stop_start() {
         if (time_stmp >= inc * 10) {
             status = !status;
             time_stmp = 0;
         }
-     
+
     }
-    void update () {
+    void update() {
         if (status) time += inc;
         time_stmp += inc;
     }
- 
+
 };
 
 TimeObj Time{};
@@ -92,7 +92,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 GLFWwindow* make_window() {
     if (!glfwInit()) std::exit(EXIT_FAILURE);
 
-    glfwWindowHint(GLFW_SAMPLES, 8); 
+    glfwWindowHint(GLFW_SAMPLES, 8);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -161,52 +161,29 @@ constexpr int XSZ = 200;
 
 static Surface<XSZ, YSZ> sur(0.f, 0.f, 1.0, 1.0);
 
-/*
-void update_arr() {
-    static float t = 0;
-    for (int i = 0; i < YSZ; i++) {
-        for (int j = 0; j < XSZ; j++) {
-            int indx = j + i * XSZ;
-            Vertex& coord_xy = sur.arr[indx];
-            coord_xy.Y = gauss(std::cos(5 * (t+coord_xy.X)), std::sin(5 *
-(t+coord_xy.Z)));
-            // cout << "[" << coord_xy.Z << "]";
-        }
-        //cout << "\n\n";
-    }
-    t += 0.001;
-}
+// Grid is a pure data class (no GL calls in its constructor), so like
+// Surface it can be constructed in static memory before main() creates
+// the GL context. It only needs the surface's vertex array and EBO
+// layout, both of which are already available on `sur` above.
 
-*/
+static Grid<XSZ / 10, 2, XSZ, YSZ> grid(sur.arr, sur.gl_ebo_arr(), glm::vec4(1));
 
-enum class BufferIds : int {
-
-    EBO,
-    VBO,
-    EBO_major_grid,
-    EBO_minor_grid
-};
-
-enum class VertexIds : int { VAO, major_grid, minor_grid };
-
-#define buffer(name) buffer_ids[(int)BufferIds::name]
-#define vertex(name) vertex_ids[(int)VertexIds::name]
 
 GLuint is_gridLoc;
 GLuint grid_clrLoc;
 
-int main(){
+int main() {
 
-    
+
     mat_debug = false;
-    
 
-    ShaderReader<1000, 2> shader_reader("shaders.h");
+
+    ShaderReader<2000, 2> shader_reader("shaders.h");
 
     //SHADER LOADING
     char* vertex_shader = shader_reader["surface"]["vertex"];
     char* fragment_shader = shader_reader["surface"]["fragment"];
-    
+
     GLFWwindow* window = make_window();
 
     GLuint program = create_program(vertex_shader, fragment_shader);
@@ -227,15 +204,19 @@ int main(){
 
     glUseProgram(program);
 
-  
+
     float freq = 2 * PI;  // freqency
 
     update_MVP_n_send(mvpLoc);
     //UPLOADING UNIFROMS
     glUniform1f(f_Loc, freq);
 
-    static GLSurfaceHandel<XSZ, YSZ> gl_surface{ &sur };
-    static SurfaceGrid<XSZ / 10, 2, XSZ, YSZ> gl_grid{ gl_surface };
+   
+    static GLDrawHandel<XSZ, YSZ> gl_surface{ &sur };
+    static GLDrawHandel<XSZ, YSZ> gl_grid{ grid, gl_surface };
+
+    // constructor does the line shrinking. 
+    gl_surface.commit_vbo();
 
     glUseProgram(program);
     glEnable(GL_MULTISAMPLE);
@@ -261,9 +242,9 @@ int main(){
         }
 
 
-         glEnable(GL_POLYGON_OFFSET_FILL);
-         glPolygonOffset(1.0,-1.0);
-         
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.0, -1.0);
+
 
 
         gl_surface.draw();
@@ -280,5 +261,5 @@ int main(){
 
     return 0;
 
-    
+
 }
