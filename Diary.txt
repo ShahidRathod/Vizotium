@@ -122,7 +122,32 @@ What CPU feeds to GPU :
 - EBO indexing for vector mesh. do not compute the vector mesh using the ebo since that will redundant with each draw call or iteration over complete mesh 
 
 how much mesh is reduced by ebo 
-- proportional to number of coordinates used for circle. exactly ((8*N)* (sizeof(float)-2)) use glUnsinged short or even byte 
-- 
+- proportional to number of coordinates used for circle. exactly ((8*N)* (sizeof(float)-2)) use glUnsinged short or even byte .
 
 
+is vector is composed of the base vector mesh transformed by it's world matrix - (transform head minus tail then translate by tail)  .
+
+now somehow there is way that all of the world matrix could be  computed then stored in GPU and then used by the vertex shader with each world matrix being mapped to the appropriate invocation range in vertex shader, without draw call again and again for each vector and passing matrix as uniform - although the current approach is this.
+
+
+**Vector rendering started** [26/07/2026]
+
+.different vertex shader will be used for cone 
+where (1) the geometry of cone will be constructed out of a 2d circle in shader where modulo with 3 will be done to know that it is centre and change it's value and to make the (2) cone will be made bigger (3) cone will not be stretched but translated.
+
+
+There are two way to eliminate the need for separate ebo for Cone.
+
+- glDrawBaseindex: the ebo of circle will be taken and added to baseindex. will differ in draw count. no separate vao needed.
+- offset for vbo in vao. will differ in draw count and a separate vao needed.
+
+
+- vao_coords_setup needs to be now more free about wheater or not to generate and bind the vao vbo and ebo . template now will take three bools (change needed throught the files)
+
+the loop used in Surface<XSZ,YSZ> can be used for making the ebo arr can be put in general use for any mesh where the vertex are laid out contagiously like the arr of surface is.
+
+that function will require vbo and XSZ and YSZ as dimensions as templates paramenter for surface<XSZ,YSZ>:::make_mesh_ebo(Vertex* vbo_arr , )
+
+
+we are now making vao_coords_setuo the member variable of class glDrawobject
+vao_coords_setup not just take the upload vbo buffer as a template parameter but is dependent on the class state variables which is product set (shared,upload)*(VAO ,VBO ,EBO), the vbo and ebo array will also be establised as a member variables before we call the vao_coords setup - this way we dont have to paas the long list of parameter the ugly way .

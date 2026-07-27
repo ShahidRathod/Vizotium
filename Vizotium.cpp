@@ -4,8 +4,17 @@
 #include <math.h>
 #include <cstdlib>
 #include <iostream>
-#include "Shapes.h"
+
+// DO NOT reorder these include
+
+#include "Camera.h"
 #include "Surface.h"
+#include "DrawHandel.h"
+
+//---------------------
+
+
+#include "Shapes.h"
 #include "ShaderLoader.h"
 
 
@@ -188,7 +197,7 @@ int main() {
 
     GLuint program = create_program(vertex_shader, fragment_shader);
 
-    // UNIFORMS 
+    // UNIFORMS
 
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
     GLuint t_Loc = glGetUniformLocation(program, "t");
@@ -211,18 +220,20 @@ int main() {
     //UPLOADING UNIFROMS
     glUniform1f(f_Loc, freq);
 
-   
+
     static GLDrawHandel<XSZ, YSZ> gl_surface{ &sur };
     static GLDrawHandel<XSZ, YSZ> gl_grid{ grid, gl_surface };
-
-    // constructor does the line shrinking. 
     gl_surface.commit_vbo();
 
     glUseProgram(program);
+
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
+    
     GLint samples;
+    
     glGetIntegerv(GL_SAMPLES, &samples);
+
     std::cout << "MSAA samples = " << samples << '\n';
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);

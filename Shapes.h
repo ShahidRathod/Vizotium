@@ -72,3 +72,20 @@ template <int coords_n> struct Vector {
 
 
 };
+/*
+struct SetupState {
+	bool shared_vbo;
+	bool upload_vbo;
+
+	bool shared_ebo;
+	bool upload_ebo;
+
+	bool shared_vao;
+	bool point_vao;
+
+	int coords_len;
+	int loc;
+
+
+};
+*/
