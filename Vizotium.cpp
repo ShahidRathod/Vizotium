@@ -1,16 +1,17 @@
 #define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
 #include <cstdlib>
-#include <iostream>
+
 
 // DO NOT reorder these include
 
 #include "Camera.h"
 #include "Surface.h"
 #include "DrawHandel.h"
-
+#include <functional>
 //---------------------
 
 
@@ -105,6 +106,7 @@ GLFWwindow* make_window() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GLFW_TRUE);
 
     GLFWwindow* window =
         glfwCreateWindow(1280, 720, "vizotium", nullptr, nullptr);
@@ -120,6 +122,8 @@ GLFWwindow* make_window() {
         glfwTerminate();
         std::exit(EXIT_FAILURE);
     }
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -181,6 +185,34 @@ static Grid<XSZ / 10, 2, XSZ, YSZ> grid(sur.arr, sur.gl_ebo_arr(), glm::vec4(1))
 GLuint is_gridLoc;
 GLuint grid_clrLoc;
 
+constexpr SetupState surface_setup = {
+            false,
+            false,// waiting for grid to shrink width 
+
+            false,
+            true,
+
+            false,
+            true,
+
+            0
+
+};
+
+constexpr SetupState grid_setup = {
+            true, // shared vbo_data
+            false, // uploading vbo this time earlier this was done by commit_vbo()
+
+            false,
+            true,
+
+            false,
+            true,
+            0
+
+};
+
+
 int main() {
 
 
@@ -221,8 +253,9 @@ int main() {
     glUniform1f(f_Loc, freq);
 
 
-    static GLDrawHandel<XSZ, YSZ> gl_surface{ &sur };
-    static GLDrawHandel<XSZ, YSZ> gl_grid{ grid, gl_surface };
+    static GLDrawHandel<surface_setup,> gl_surface{ sur.mesh_data()};
+    static GLDrawHandel<surface_setup,> gl_grid{ grid.mesh_data()};
+    
     gl_surface.commit_vbo();
 
     glUseProgram(program);
@@ -236,6 +269,8 @@ int main() {
 
     std::cout << "MSAA samples = " << samples << '\n';
     while (!glfwWindowShouldClose(window)) {
+
+        glfwPollEvents();
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -247,7 +282,6 @@ int main() {
         if (inp) {
             if (mat_debug) CLEAR_SCREEN;
             update_MVP_n_send(mvpLoc);
-
             cout << "[Yaw:] " << camera.yaw << " [Pitch:] " << camera.pitch;
             inp = false;
         }
@@ -256,18 +290,13 @@ int main() {
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.0, -1.0);
 
-
-
         gl_surface.draw();
-        gl_grid.draw();
+        //gl_grid.draw();
 
         glfwSwapBuffers(window);
-
-        glfwPollEvents();
     }
 
     glDeleteProgram(program);
-
     glfwTerminate();
 
     return 0;
