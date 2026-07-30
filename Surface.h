@@ -127,7 +127,8 @@ public:
     constexpr size_t gl_vbo_sz() { return size * sizeof(Vertex); }
     int* gl_ebo_arr() { return &(ebo_arr[0].t1.v1); }
     constexpr size_t gl_ebo_sz() { return ebo_sqre_sz * sizeof(Ebo_sqre); }
-    constexpr int gl_ebo_count() { return ebo_sz; }
+    constexpr int draw_count() { return ebo_sz; }
+
 
     MeshData mesh_data() {
         return {
@@ -135,6 +136,8 @@ public:
          gl_vbo_sz (),
          gl_ebo_arr(),
          gl_ebo_sz (),
+         draw_count()
+
         };
     } 
 };
@@ -160,11 +163,9 @@ struct GridEbo {
     }
 
     static constexpr size_t gl_ebo_sz() {
-        return sizeof(GridCell<x_sz-1>)*x_n + sizeof(GridCell<y_n>)*(y_sz-1);
-        // was earlier sizeof(x_lines) + sizeof(y_lines)
+        return sizeof(x_lines) + sizeof(y_lines);
     }
 };
-
 
 
 
@@ -260,7 +261,6 @@ struct Grid {
                 data[sqre.t2.v1].X -= x_f;
                 data[sqre.t2.v3].X -= x_f;
             }
-
         }
 
         std::cout << "grid constructor complete \n";
@@ -270,10 +270,12 @@ struct Grid {
         return GridT::gl_ebo_sz() / sizeof(int);
     }
 
+    // the draw_count of grid is derived by sizeof(xlines+ ylines) 
+    // and for surface the ebo array is derived from the ebo_sz constexpr 
 
     MeshData mesh_data() {
         return {
-         nullptr,
+         0,
          0,
          main_grid.gl_ebo_arr(),
          main_grid.gl_ebo_sz(),
@@ -281,4 +283,5 @@ struct Grid {
         };
     }
 };
+
 

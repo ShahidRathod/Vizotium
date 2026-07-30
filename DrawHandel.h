@@ -7,9 +7,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-extern GLuint is_gridLoc;
-extern GLuint grid_clrLoc;
-
 
 
 struct SetupState {
@@ -31,19 +28,27 @@ struct GLDrawHandel {
     
     GLDrawHandel(MeshData data) {
         mesh_data = data;
+
+        /*
+        for (int i = 0;  i < 10;  i++)
+        {
+            std::cout << mesh_data.vbo_data[i] << ",";
+        }*/
+
     }
 
-
-    template <SetupState state>
-    inline void coords_vao_setup() {
+    inline void setup() {
 
         if constexpr (!state.shared_vbo) {
+            std::cout << "generated vbo\n";
             glGenBuffers(1, &VBO);
         }
         if constexpr (!state.shared_ebo) {
+            std::cout << "generated ebo\n";
             glGenBuffers(1, &EBO);
         }
         if constexpr (!state.shared_vao) {
+            std::cout << "generated vao\n";
             glGenVertexArrays(1, &VAO);
         }
 
@@ -52,12 +57,14 @@ struct GLDrawHandel {
         // VBObuffer of vboid in the current context.
 
         if constexpr (state.upload_vbo) {
+            std::cout << "uplaoded vbo\n";
             glBufferData(GL_ARRAY_BUFFER, mesh_data.vbo_sz, mesh_data.vbo_data, GL_STATIC_DRAW);
         }
         
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
         if (state.upload_ebo) {
+            std::cout << "uplaoded ebo\n";
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh_data.ebo_sz, mesh_data.ebo_data, GL_STATIC_DRAW);
         }
 
@@ -94,6 +101,7 @@ struct GLDrawHandel {
         pre_draw_call();
 
         glBindVertexArray(VAO);
+
         glDrawElements(
             GL_TRIANGLES,
             mesh_data.draw_count,

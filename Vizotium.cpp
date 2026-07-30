@@ -252,23 +252,28 @@ int main() {
     glUniform3f(grid_clrLoc, 1,1,1);
 
     auto pre_surface = []() {
-        //cout << "pre surface";
         glUniform1i(is_gridLoc,false);
         };
 
     auto post_surface = []() {};
     
     auto pre_grid = []() {
-        //cout << "pre_grid";
         glUniform1i(is_gridLoc,true);
         };
 
     auto post_grid = []() {};
 
+    static GLDrawHandel        
+        <surface_setup,pre_surface,post_surface>
+        gl_surface{ sur.mesh_data() };
     static GLDrawHandel
-        <surface_setup,pre_surface,post_surface> gl_surface{ sur.mesh_data() };
-    static GLDrawHandel
-        <surface_setup,pre_grid,post_grid> gl_grid{ grid.mesh_data() };
+        <surface_setup,pre_grid,post_grid> 
+        gl_grid{ grid.mesh_data() };
+    
+    gl_grid.VBO = gl_surface.VBO;
+
+    gl_grid.setup();
+    gl_surface.setup();
 
     gl_surface.commit_vbo();
 
@@ -301,36 +306,20 @@ int main() {
             inp = false;
         }
 
-
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.0, -1.0);
 
         gl_surface.draw();
-        //gl_grid.draw();
+        gl_grid.draw();
 
         glfwSwapBuffers(window);
     }
-
+    
     glDeleteProgram(program);
     glfwTerminate();
 
     return 0;
 
-
 }
 
-/*
-struct MeshData {
-    
-    float* vbo_data = nullptr;
-    size_t vbo_sz = 0;
 
-    int* ebo_data = nullptr;
-    size_t ebo_sz = 0;
-
-    int draw_count;
-
-};
-
-Files are are traked
-*/
