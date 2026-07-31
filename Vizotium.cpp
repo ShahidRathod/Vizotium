@@ -1,10 +1,9 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
 #include <cstdlib>
-#include <functional>
+#include <iostream>
 
 // DO NOT reorder these include
 
@@ -106,7 +105,6 @@ GLFWwindow* make_window() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
     GLFWwindow* window =
         glfwCreateWindow(1280, 720, "vizotium", nullptr, nullptr);
@@ -122,8 +120,6 @@ GLFWwindow* make_window() {
         glfwTerminate();
         std::exit(EXIT_FAILURE);
     }
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -147,19 +143,20 @@ bool process_input(GLFWwindow* win, Camera& cam) {
 
     KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
         KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
-  
-            KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
-            KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
-            KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
-            KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
+        // KEY_FUNC_ELSE_IF(LEFT, cam.shift_x_by(-0.1f))
+        // KEY_FUNC_ELSE_IF(RIGHT, cam.shift_x_by(0.1f))
 
-            KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.1f))
-            KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
+        KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
+        KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
+        KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
+        KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
 
-            KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
-            KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
-            KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
-            return key_press;
+        KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.1f))
+        KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
+
+        KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
+        KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
+        return key_press;
 }
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
@@ -184,44 +181,17 @@ static Grid<XSZ / 10, 2, XSZ, YSZ> grid(sur.arr, sur.gl_ebo_arr(), glm::vec4(1))
 GLuint is_gridLoc;
 GLuint grid_clrLoc;
 
-constexpr SetupState surface_setup = {
-            false,
-            false,// waiting for grid to shrink width 
-
-            false,
-            true,
-
-            false,
-            true,
-
-            0
-
-};
-
-constexpr SetupState grid_setup = {
-            true, // shared vbo_data
-            false,
-
-            false,
-            true,
-
-            false,
-            true,
-            0
-
-};
-
-
 int main() {
+
+
     mat_debug = false;
+
+
     ShaderReader<2000, 2> shader_reader("shaders.h");
 
-    bool is_grid = false;
     //SHADER LOADING
-
     char* vertex_shader = shader_reader["surface"]["vertex"];
     char* fragment_shader = shader_reader["surface"]["fragment"];
-    char* grid_vs = shader_reader["grid"]["vertex"];
 
     GLFWwindow* window = make_window();
 
@@ -249,33 +219,18 @@ int main() {
     update_MVP_n_send(mvpLoc);
     //UPLOADING UNIFROMS
     glUniform1f(f_Loc, freq);
-    glUniform3f(grid_clrLoc, 1,1,1);
 
-    auto pre_surface = []() {
-        glUniform1i(is_gridLoc,false);
-        };
 
-    auto post_surface = []() {};
+    static GLDrawHandel<XSZ, YSZ> gl_surface{ &sur, sur.mesh_data()};
+    static GLDrawHandel<XSZ, YSZ> gl_grid{ grid, gl_surface,grid.mesh_data()};
+
+
     
-    auto pre_grid = []() {
-        glUniform1i(is_gridLoc,true);
-        };
-
-    auto post_grid = []() {};
-
-    static GLDrawHandel        
-        <surface_setup,pre_surface,post_surface>
-        gl_surface{ sur.mesh_data() };
-    static GLDrawHandel
-        <surface_setup,pre_grid,post_grid> 
-        gl_grid{ grid.mesh_data() };
     
-    gl_grid.VBO = gl_surface.VBO;
+    gl_surface.upload_ebo();
+    gl_grid.upload_ebo();
 
-    gl_grid.setup();
-    gl_surface.setup();
-
-    gl_surface.commit_vbo();
+    gl_surface.upload_vbo();
 
     glUseProgram(program);
 
@@ -284,13 +239,11 @@ int main() {
 
     GLint samples;
 
+
     glGetIntegerv(GL_SAMPLES, &samples);
 
     std::cout << "MSAA samples = " << samples << '\n';
-    
     while (!glfwWindowShouldClose(window)) {
-
-        glfwPollEvents();
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -302,24 +255,30 @@ int main() {
         if (inp) {
             if (mat_debug) CLEAR_SCREEN;
             update_MVP_n_send(mvpLoc);
+
             cout << "[Yaw:] " << camera.yaw << " [Pitch:] " << camera.pitch;
             inp = false;
         }
 
+
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.0, -1.0);
+
+
 
         gl_surface.draw();
         gl_grid.draw();
 
         glfwSwapBuffers(window);
+
+        glfwPollEvents();
     }
-    
+
     glDeleteProgram(program);
+
     glfwTerminate();
 
     return 0;
 
+
 }
-
-

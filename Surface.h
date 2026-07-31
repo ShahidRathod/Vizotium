@@ -59,15 +59,16 @@ enum class Clr : int {
 };
 
 
+
 struct MeshData {
 
     float* vbo_data = nullptr;
     size_t vbo_sz = 0;
 
-    int*   ebo_data = nullptr;
+    int* ebo_data = nullptr;
     size_t ebo_sz = 0;
-    
-    int    draw_count;
+
+    int draw_count;
 
 };
 
@@ -124,22 +125,22 @@ public:
     }
 
     float* gl_arr() { return &(arr[0].X); }
-    constexpr size_t gl_vbo_sz() { return size * sizeof(Vertex); }
-    int* gl_ebo_arr() { return &(ebo_arr[0].t1.v1); }
-    constexpr size_t gl_ebo_sz() { return ebo_sqre_sz * sizeof(Ebo_sqre); }
-    constexpr int draw_count() { return ebo_sz; }
 
+    constexpr int gl_vbo_sz() { return size * sizeof(Vertex); }
+    int* gl_ebo_arr() { return &(ebo_arr[0].t1.v1); }
+
+    constexpr int gl_ebo_sz() { return ebo_sqre_sz * sizeof(Ebo_sqre); }
+    constexpr int gl_ebo_count() { return ebo_sz; }
 
     MeshData mesh_data() {
         return {
-         gl_arr    (),
-         gl_vbo_sz (),
+         gl_arr(),
+         gl_vbo_sz(),
          gl_ebo_arr(),
-         gl_ebo_sz (),
-         draw_count()
-
+         gl_ebo_sz(),
+         gl_ebo_count()
         };
-    } 
+    }
 };
 
 // each grid cell contains the nth x line and nth y line
@@ -162,13 +163,11 @@ struct GridEbo {
         return reinterpret_cast<int*> (x_lines);
     }
 
-    static constexpr size_t gl_ebo_sz() {
-        return sizeof(x_lines) + sizeof(y_lines);
+    static constexpr int gl_ebo_sz() {
+        return sizeof(GridCell<x_sz - 1>) * x_n + sizeof(GridCell<y_n>) * (y_sz - 1);
+        // was earlier sizeof(x_lines) + sizeof(y_lines)
     }
 };
-
-
-
 
 template <int line_intervl, int line_width, int x_sz, int y_sz >
 struct Grid {
@@ -178,21 +177,16 @@ struct Grid {
 
     float x_f;
     float z_f;
-    
     static constexpr int x_grids = (y_sz - 1) / line_intervl;
     static constexpr int y_grids = (x_sz - 1) / line_intervl;
-
     static constexpr int ebo_stride = x_sz - 1;
     glm::vec4 rgba;
 
     using GridT = GridEbo< x_grids, y_grids, x_sz, y_sz>;
     GridT main_grid;
     GridT side_grid;
-    Vertex* vbo_arr;
 
     Grid(Vertex* data, int* ebo_arr, glm::vec4 clr) {
-        vbo_arr = data;
-
         Vertex* v_ptr = (Vertex*)(data);
         x_f = (v_ptr[1].X - v_ptr[0].X) * 0.19;
         z_f = (v_ptr[0].Z - v_ptr[x_sz].Z) * 0.19;
@@ -233,13 +227,11 @@ struct Grid {
             }
         }
 
-        // GridCell<y_n> y_lines [y_sz-1];
+        //GridCell<y_n> y_lines [y_sz-1];
         // architecture intent of y_lines:
         // unlike x_lines the every Ebo_sqre of x_lines element is contagiously mapped to the
-        // ebo array of surface . but in y lines teh required ebo_sqre 
-        // elements are not contagious in memory but with interval is
-        // the core amibiguity emiminator fact. wheather it's x_lines 
-        // or y_lines for both them the actual rendering order is horizontal
+        // ebo array of surface . but in y lines teh required ebo_sqre elements are not contagious in memory but with interval is
+        // the core amibiguity emiminator fact. wheather it's x_lines or y_lines for both them the actual rendering order is horizontal
         // always the grid ebo in a given veertical line is
 
         for (int i = 0; i < y_sz - 1; i++) {
@@ -255,11 +247,36 @@ struct Grid {
             for (int k = 0; k < y_grids; k++) {
                 Ebo_sqre sqre = (Ebo_sqre)main_grid.y_lines[i].ebo[k];
 
+                /*float before[] = {
+
+                vertx[sqre.t1.v1].X,
+                vertx[sqre.t1.v2].X,
+                vertx[sqre.t1.v3].X,
+                vertx[sqre.t2.v1].X
+                };
+                */
+
                 data[sqre.t1.v1].X += x_f;
                 data[sqre.t1.v3].X += x_f;
 
                 data[sqre.t2.v1].X -= x_f;
                 data[sqre.t2.v3].X -= x_f;
+
+                /* float after[] = {
+
+                vertx[sqre.t1.v1].X,
+                vertx[sqre.t1.v2].X,
+                vertx[sqre.t1.v3].X,
+                vertx[sqre.t2.v1].X
+                };
+
+
+
+                for (int i = 0; i < 4; i++)
+                 {
+                     std::cout << " | "<<before[i] << " | " << after[i] <<"  |  "<<before[i]-after[i] << "\n";
+                 }
+                std::cout << "\n\n\n";*/
             }
         }
 
@@ -270,12 +287,9 @@ struct Grid {
         return GridT::gl_ebo_sz() / sizeof(int);
     }
 
-    // the draw_count of grid is derived by sizeof(xlines+ ylines) 
-    // and for surface the ebo array is derived from the ebo_sz constexpr 
-
     MeshData mesh_data() {
         return {
-         0,
+         nullptr,
          0,
          main_grid.gl_ebo_arr(),
          main_grid.gl_ebo_sz(),
@@ -284,4 +298,6 @@ struct Grid {
     }
 };
 
-
+inline float fn(float a, float b) {
+    return std::sin(a * b);
+}
