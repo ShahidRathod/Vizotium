@@ -126,10 +126,11 @@ public:
 
     float* gl_arr() { return &(arr[0].X); }
 
-    constexpr int gl_vbo_sz() { return size * sizeof(Vertex); }
+    constexpr size_t gl_vbo_sz() { return size * sizeof(Vertex); }
     int* gl_ebo_arr() { return &(ebo_arr[0].t1.v1); }
 
-    constexpr int gl_ebo_sz() { return ebo_sqre_sz * sizeof(Ebo_sqre); }
+    constexpr size_t gl_ebo_sz() { return ebo_sqre_sz * sizeof(Ebo_sqre); }
+
     constexpr int gl_ebo_count() { return ebo_sz; }
 
     MeshData mesh_data() {
@@ -163,7 +164,7 @@ struct GridEbo {
         return reinterpret_cast<int*> (x_lines);
     }
 
-    static constexpr int gl_ebo_sz() {
+    static constexpr size_t gl_ebo_sz() {
         return sizeof(GridCell<x_sz - 1>) * x_n + sizeof(GridCell<y_n>) * (y_sz - 1);
         // was earlier sizeof(x_lines) + sizeof(y_lines)
     }
@@ -247,36 +248,12 @@ struct Grid {
             for (int k = 0; k < y_grids; k++) {
                 Ebo_sqre sqre = (Ebo_sqre)main_grid.y_lines[i].ebo[k];
 
-                /*float before[] = {
-
-                vertx[sqre.t1.v1].X,
-                vertx[sqre.t1.v2].X,
-                vertx[sqre.t1.v3].X,
-                vertx[sqre.t2.v1].X
-                };
-                */
-
                 data[sqre.t1.v1].X += x_f;
                 data[sqre.t1.v3].X += x_f;
 
                 data[sqre.t2.v1].X -= x_f;
                 data[sqre.t2.v3].X -= x_f;
 
-                /* float after[] = {
-
-                vertx[sqre.t1.v1].X,
-                vertx[sqre.t1.v2].X,
-                vertx[sqre.t1.v3].X,
-                vertx[sqre.t2.v1].X
-                };
-
-
-
-                for (int i = 0; i < 4; i++)
-                 {
-                     std::cout << " | "<<before[i] << " | " << after[i] <<"  |  "<<before[i]-after[i] << "\n";
-                 }
-                std::cout << "\n\n\n";*/
             }
         }
 

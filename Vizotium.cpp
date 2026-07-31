@@ -181,13 +181,16 @@ static Grid<XSZ / 10, 2, XSZ, YSZ> grid(sur.arr, sur.gl_ebo_arr(), glm::vec4(1))
 GLuint is_gridLoc;
 GLuint grid_clrLoc;
 
+constexpr SetupState sur_state = { true,true,0 };
+constexpr SetupState grid_state = { false,true,0 };
+
 int main() {
 
 
     mat_debug = false;
 
 
-    ShaderReader<2000, 2> shader_reader("shaders.h");
+    ShaderReader<3000, 2> shader_reader("shaders.h");
 
     //SHADER LOADING
     char* vertex_shader = shader_reader["surface"]["vertex"];
@@ -221,15 +224,13 @@ int main() {
     glUniform1f(f_Loc, freq);
 
 
-    static GLDrawHandel<XSZ, YSZ> gl_surface{ &sur, sur.mesh_data()};
-    static GLDrawHandel<XSZ, YSZ> gl_grid{ grid, gl_surface,grid.mesh_data()};
+    static GLDrawHandel<sur_state> gl_surface{ sur.mesh_data(),false  };
+    static GLDrawHandel<grid_state> gl_grid{grid.mesh_data(),true , glm::vec4(1,1,1,1),gl_surface.VBO};
 
 
-    
-    
+
     gl_surface.upload_ebo();
     gl_grid.upload_ebo();
-
     gl_surface.upload_vbo();
 
     glUseProgram(program);
