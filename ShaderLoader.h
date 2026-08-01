@@ -199,7 +199,7 @@ template <int b_sz, int n> struct ShaderReader {
         }
 
 
-        delim_tkn.put_char(c);
+        if (c!=' ') delim_tkn.put_char(c);
         char_no_s++;
         return c;
     }
@@ -341,7 +341,7 @@ template <int b_sz, int n> struct ShaderReader {
     void content_loop() {
 
 
-        while ((cursr != '<' || at_comnt) && cursr != EOF) {
+        while ((cursr != '<' && !at_comnt) && cursr != EOF) {
             get_nxt();
         }
     }
@@ -349,20 +349,24 @@ template <int b_sz, int n> struct ShaderReader {
 
     int read_content(int type_indx, char* opn_shdr_tg) {
         new_ln_fix = 0;
+        
         long cntn_strt = ftell(file) - 1;
+        long cntn_end;
         bool cls_found = false;
+        bool has_newln;
 
-        content_loop();
+        do { 
 
-        long cntn_end = ftell(file) - 1;
+            content_loop();
+            cntn_end = ftell(file) - 1;
+            get_nxt();
+            has_newln = skip_whitespc();
+
+        } while (has_newln || cursr!= '/');
+
+       
         long tg_strt = ftell(file);
         long len = cntn_end - cntn_strt - new_ln_fix;
-
-        get_nxt();
-
-        if (!skip_whitespc() && cursr != '/') {
-            PRINT_EXIT("Exprected a closing tag Maybe you forgot '/'\n");
-        }
 
         get_nxt(); // to make the cursr past the '/' charater 
         //because in the cpt_tag_name_at has skip_whitepsc 
