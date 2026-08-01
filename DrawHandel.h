@@ -8,10 +8,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cstring>
 
-extern GLuint is_gridLoc;
-extern GLuint grid_clrLoc;
-
-
 
 struct SetupState {
     bool new_vbo;
@@ -22,18 +18,6 @@ struct SetupState {
 
 template <SetupState state> struct GLDrawHandel {
     GLuint VBO, VAO, EBO;
-
-    float* vbo_data = nullptr;
-    size_t vbo_sz = 0;
-    int* ebo_data = nullptr;
-    size_t ebo_sz = 0;
-    int  ebo_draw_count;
-
-    bool is_grid = false;
-    glm::vec4 grid_color{};
-
-
-
     MeshData data;
 
     inline void vao_setup(GLuint s_vbo,GLuint s_ebo) {
@@ -91,86 +75,16 @@ template <SetupState state> struct GLDrawHandel {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.ebo_sz, data.ebo_data, GL_STATIC_DRAW);
     }
 
-    GLDrawHandel(MeshData given_data, bool isgrid , glm::vec4 clr= glm::vec4(1,1,1,1),GLuint shared_vbo = 0,GLuint shared_ebo = 0) {
-        
+    GLDrawHandel(MeshData given_data,GLuint shared_vbo = 0,GLuint shared_ebo = 0) {
         data = given_data;
-        grid_color = clr;
-        vao_setup(shared_vbo,shared_ebo);
-        is_grid = isgrid;
+        vao_setup(shared_vbo, shared_ebo);
     }
-    void temp_make_mesh_data() {
+  
 
-        data = {
-
-        vbo_data,
-        vbo_sz ,
-        ebo_data ,
-        ebo_sz ,
-        ebo_draw_count 
-        };
-    }
-
-    // --- Surface ---
-    
-   /* GLDrawHandel(Surface<x_sz, y_sz>* sur, MeshData given_data) {
-
-
-        /*vbo_data = sur->gl_arr();
-        vbo_sz = sur->gl_vbo_sz();
-        ebo_data = sur->gl_ebo_arr();
-        ebo_sz = sur->gl_ebo_sz();
-        ebo_draw_count = sur->gl_ebo_count();
-        
-
-       // temp_make_mesh_data();
-        data = given_data;
-
-        constexpr SetupState state = { true,true,0 };
-       
-        std::cout << "vao_setup:surface\n";
-        coords_vao_setup<state>();
-    }
-
-    // --- Grid --- (shares the VBO id from the surface's GLDrawHandel)
-    template <int line_intervl, int line_width>
-    GLDrawHandel(Grid<line_intervl, line_width, x_sz, y_sz>& grid,
-        GLDrawHandel& sur_gl, MeshData give_data) {
-
-        VBO = sur_gl.VBO;
-
-        /*ebo_data = grid.main_grid.gl_ebo_arr();
-        ebo_sz = grid.main_grid.gl_ebo_sz();
-        vbo_data = sur_gl.vbo_data;
-        ebo_draw_count = grid.draw_count();
-        
-
-        //temp_make_mesh_data();
-        data = give_data;
-
-        std::cout << "vao_setup:grid\n";
-
-
-        constexpr SetupState state = { false,true,0 };
-
-        coords_vao_setup<state>();
-
-        is_grid = true;
-        grid_color = grid.rgba;
-    }*/
-
-    // Only meaningful for a handle that owns its VBO (the Surface case) -
-    // Grid's handle has no vbo_data and should never call this.
-
-    void draw() {
-
+    template <typename FuncT>
+    void draw(FuncT fn) {
+        fn();
         glBindVertexArray(VAO);
-
-        glUniform1i(is_gridLoc, is_grid);
-
-        if (is_grid) {
-            glUniform4fv(grid_clrLoc, 1, glm::value_ptr(grid_color));
-        }
-
 
         glDrawElements(
             GL_TRIANGLES,

@@ -178,8 +178,7 @@ static Surface<XSZ, YSZ> sur(0.f, 0.f, 1.0, 1.0);
 static Grid<XSZ / 10, 2, XSZ, YSZ> grid(sur.arr, sur.gl_ebo_arr(), glm::vec4(1));
 
 
-GLuint is_gridLoc;
-GLuint grid_clrLoc;
+
 
 constexpr SetupState sur_state = { true,true,0 };
 constexpr SetupState grid_state = { false,true,0 };
@@ -211,8 +210,8 @@ int main() {
     GLuint xsz_Loc = glGetUniformLocation(program, "XSZ");
     GLuint ysz_Loc = glGetUniformLocation(program, "YSZ");
 
-    is_gridLoc = glGetUniformLocation(program, "is_grid");
-    grid_clrLoc = glGetUniformLocation(program, "grid_clr");
+    GLuint is_gridLoc = glGetUniformLocation(program, "is_grid");
+    GLuint grid_clrLoc = glGetUniformLocation(program, "grid_clr");
 
     glUseProgram(program);
 
@@ -222,10 +221,17 @@ int main() {
     update_MVP_n_send(mvpLoc);
     //UPLOADING UNIFROMS
     glUniform1f(f_Loc, freq);
+    glUniform4f(grid_clrLoc,1,1,1,1);
+    auto sur_precall = [is_gridLoc]() {
+        glUniform1i(is_gridLoc,false);
+        };
+    auto grid_precall = [is_gridLoc]() {
+        glUniform1i(is_gridLoc, true);
+        };
 
+    static GLDrawHandel<sur_state>  gl_surface { sur.mesh_data()};
 
-    static GLDrawHandel<sur_state> gl_surface{ sur.mesh_data(),false  };
-    static GLDrawHandel<grid_state> gl_grid{grid.mesh_data(),true , glm::vec4(1,1,1,1),gl_surface.VBO};
+    static GLDrawHandel<grid_state> gl_grid{grid.mesh_data(),gl_surface.VBO};
 
 
 
@@ -267,8 +273,8 @@ int main() {
 
 
 
-        gl_surface.draw();
-        gl_grid.draw();
+        gl_surface.draw(sur_precall);
+        gl_grid.draw(grid_precall);
 
         glfwSwapBuffers(window);
 
