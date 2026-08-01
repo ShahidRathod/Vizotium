@@ -4,6 +4,14 @@
 #include <cstdlib>
 #include <cstddef>
 
+
+
+// color codes
+
+#define RED   "\x1b[31m"
+#define RESET "\x1b[0m"
+
+
 constexpr int n_sz = 20;
 
 enum class ShaderType : int {
@@ -116,8 +124,10 @@ struct ShaderHandel {
 };
 
 #define PRINT_EXIT(str)                                                        \
-    std::cerr << "LINE NO:(" << ln_no << "):" << char_no << " " << str;        \
+    std::cerr << RED "Shader Loader Error LINE NO:(" << ln_no << "):" << char_no << " " << str <<RESET;     \
     exit(EXIT_FAILURE);
+
+
 
 
 #define PRINT_EXIT_NO_LINE(str)                                                        \
@@ -359,12 +369,14 @@ template <int b_sz, int n> struct ShaderReader {
 
             content_loop();
             cntn_end = ftell(file) - 1;
-            get_nxt();
+            get_nxt(); // to get past the '<'
             has_newln = skip_whitespc();
 
-        } while (has_newln || cursr!= '/');
+        } while ( cursr!= '/');
 
        
+        if (has_newln) PRINT_EXIT("No newline character inside tags\n");
+
         long tg_strt = ftell(file);
         long len = cntn_end - cntn_strt - new_ln_fix;
 
