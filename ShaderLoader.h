@@ -126,7 +126,7 @@ struct ShaderHandel {
 
 
 // DEBUG ON OFF
-//#define debug_cout_bool
+#define debug_cout_bool
 
 
 #ifdef debug_cout_bool
@@ -338,15 +338,21 @@ template <int b_sz, int n> struct ShaderReader {
     }
 
 
+    void content_loop() {
+
+
+        while ((cursr != '<' || at_comnt) && cursr != EOF) {
+            get_nxt();
+        }
+    }
+
 
     int read_content(int type_indx, char* opn_shdr_tg) {
         new_ln_fix = 0;
         long cntn_strt = ftell(file) - 1;
         bool cls_found = false;
 
-        while ((cursr != '<' || at_comnt) && cursr != EOF) {
-            get_nxt();
-        }
+        content_loop();
 
         long cntn_end = ftell(file) - 1;
         long tg_strt = ftell(file);
@@ -391,7 +397,7 @@ template <int b_sz, int n> struct ShaderReader {
         fseek(file, tg_end, SEEK_SET);
 
         DEBUG_COUT("[write]" << write_ptr << "[write]\n");
-        
+
         curnt_element->shadr_ptrs[type_indx] = write_ptr;
         write_ptr += len + 1;
         mem_left -= (len + 1);
