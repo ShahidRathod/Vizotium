@@ -1,5 +1,6 @@
 #pragma once
 
+
 constexpr int n_sz = 20;
 
 struct Range {
@@ -13,72 +14,90 @@ struct Range {
 
 };
 
-
-
 template <int sz>
-struct RangeMemPool {
-    Range arr[sz];
-    int len;
+struct RangeTree {
 
-    Range* add(Range obj) {
+    Range arr[sz];
+    Range root_obj;
+    Range* root = arr;
+    Range* curnt = root;
+    int len = 1;
+
+    void addRange(Range obj) {
+        if (len >= sz) {
+            std::cerr << "Max camnd tag limit reached";
+            exit(EXIT_FAILURE);
+
+        }
+
+        Range* ptr = root;
+        while (ptr != nullptr) {
+            if (ptr.end > obj.start) {
+                ptr = ptr->next;
+            }
+            else {
+                ptr = ptr->inside;
+            }
+        }
         arr[len] = obj;
-        return arr + len;
+        ptr = arr + len;
+        len++;
     }
+
+    void addInside(Range obj) {
+
+    }
+
 };
 
-template <int sz>
-void addStrRange(Range* root, Range obj, RangeMemPool<sz> pool) {
-    Range* ptr = root;
-    while (ptr != nullptr) {
-        if (ptr.end > obj.start) {
-            ptr = ptr->next;
-        }
-        else {
-            ptr->ptr->inside;
-        }
+struct RangeWriter {
+
+    FILE* file;
+
+    char* dst;
+    char* pen;
+
+    RangeWriter(FILE* fl, char* d) {
+        file = fl;
+        pen = dst = d;
     }
-    ptr = pool.add(obj);
-}
+
+    inline size_t write_from_range(int start, int end) {
+
+        fseek(file, start, SEEK_SET);
+        size_t sz_read = fread(pen, sizeof(char), end - start, file);
+        pen += sz_read;
+    }
 
 
-inline size_t write_from_range(int start, int end, FILE* file, char* write_dst) {
+    size_t range_tree_write_hlpr(Range* root) {
 
-    fseek(file, start, SEEK_SET);
-    size_t sz_read = fread(write_dst, sizeof(char), end - start, file);
-    return sz_read;
-}
+        if (root) return 0;
 
-
-size_t range_tree_write_hlpr(Range* root, FILE* file, char* dst) {
-
-    if (root) return 0;
-
-    Range* ptr = root;
-    Range* inside = ptr->inside;
+        Range* ptr = root;
+        Range* inside = ptr->inside;
 
 
-    int end = root->end;
-    if (inside) end = inside->tg_start;
+        int end = root->end;
+        if (inside) end = inside->tg_start;
+        size_t write_len = 0;
 
-    fseek(file, ptr->start, SEEK_SET);
+        write_from_range(ptr->start, end);
 
-    size_t write_len = fread(dst, sizeof(char), end - ptr->start, file);
-
-    write_len += range_tree_write_hlpr(inside, file, dst + write_len);
-    write_len += range_tree_write_hlpr(ptr->next, file, dst + write_len);
-
-    return write_len;
+        write_len += range_tree_write_hlpr(inside);
+        write_len += range_tree_write_hlpr(ptr->next);
 
 
-}
+        return write_len;
 
-int range_tree_write(Range* root, char* dst, FILE* file) {
-    return range_tree_write_hlpr(root, file, dst);
-}
+    }
 
+    int range_tree_write(Range* root) {
+        return range_tree_write_hlpr(root);
+    }
 
+};
 // GET length gets converted to parse_range_tree;
-
 
 
 
