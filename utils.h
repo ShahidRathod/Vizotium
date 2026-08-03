@@ -5,6 +5,7 @@ constexpr int n_sz = 20;
 
 struct Range {
     int tg_start;
+    int tg_end;
     int  start;
     int  end;
     char name[n_sz];
@@ -70,34 +71,24 @@ struct RangeWriter {
     }
 
 
-    size_t range_tree_write_hlpr(Range* root) {
+    void range_tree_write(Range* root) {
 
-        if (root) return 0;
+        int st = root->start;
+        int end;
+        Range* inside = root->inside;
 
-        Range* ptr = root;
-        Range* inside = ptr->inside;
+        while (inside != nullptr) {
 
+            end = inside->tg_start;
+            write_from_range(st, end);
+            range_tree_write(inside);
+            st = inside->tg_end;
+            inside = inside->next;
+        }
 
-        int end = root->end;
-        if (inside) end = inside->tg_start;
-        size_t write_len = 0;
-
-        write_from_range(ptr->start, end);
-
-        write_len += range_tree_write_hlpr(inside);
-        write_len += range_tree_write_hlpr(ptr->next);
-
-
-        return write_len;
+        write_from_range(st, root->end);
 
     }
 
-    int range_tree_write(Range* root) {
-        return range_tree_write_hlpr(root);
-    }
 
 };
-// GET length gets converted to parse_range_tree;
-
-
-

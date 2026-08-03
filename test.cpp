@@ -1,4 +1,3 @@
-
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <cctype>
@@ -7,20 +6,25 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-
-
-
-
+#include "utils.h"
 
 // color codes
-
 #define RED "\x1b[31m"
 #define RESET "\x1b[0m"
+
+#define PRINT_EXIT(str)                                                        \
+    std::cerr << RED "Shader Loader Error LINE NO:(" << ln_no                  \
+              << "):" << char_no << " " << str << RESET;                       \
+    exit(EXIT_FAILURE);
+
+#define PRINT_EXIT_NO_LINE(str)                                                \
+    std::cerr << str;                                                          \
+    exit(EXIT_FAILURE);
+
 
 using std::cerr;
 using std::cout;
 
-constexpr int n_sz = 20;
 
 enum class ShaderType : int {
     Vertex,
@@ -83,6 +87,10 @@ inline const char* tag_string(ShaderType shadr, TagMode tag_t) {
     int indx = static_cast<int>(shadr) + static_cast<int>(tag_t);
     return subtag_names[indx];
 }
+constexpr int max_copy = 40;
+
+RangeTree<max_copy> rangetree;
+
 
 template <int sz> struct CircularBuff {
     int len = 0;
@@ -98,9 +106,7 @@ template <int sz> struct CircularBuff {
     }
 
     int compare_str(const char* str, int str_len) {
-
         bool is_equal = true;
-
         for (int i = 0; i < str_len; i++) {
             int indx = get_index(len - str_len + i);
             if (arr[indx] != str[i]) {
@@ -111,8 +117,6 @@ template <int sz> struct CircularBuff {
         return is_equal;
     }
 };
-
-
 
 struct ShaderHandel {
     char  name[n_sz] = {};
@@ -126,32 +130,12 @@ struct ShaderHandel {
 };
 
 
-#define PRINT_EXIT(str)                                                        \
-    std::cerr << RED "Shader Loader Error LINE NO:(" << ln_no                  \
-              << "):" << char_no << " " << str << RESET;                       \
-    exit(EXIT_FAILURE);
-
-
-#define PRINT_EXIT_NO_LINE(str)                                                \
-    std::cerr << str;                                                          \
-    exit(EXIT_FAILURE);
-
-// DEBUG ON OFF
-#define debug_cout_bool
-
-#ifdef debug_cout_bool
-#define DEBUG_COUT(str) std::cout << str;
-#else
-#define DEBUG_COUT(str)
-#endif
-
 static int check_subtag(const char* sbtg_name) {
     bool found = false;
 
     int indx = stage_count - 1;
     while (indx >= 0) {
         if (strcmp(sbtg_name, subtag_names[indx]) == 0) {
-            DEBUG_COUT(sbtg_name << " " << subtag_names[indx] << "\n");
             found = true;
             break;
         }
@@ -167,11 +151,7 @@ static int check_subtag(const char* sbtg_name) {
 
 constexpr int no_of_ranges = 20;
 
-struct StrRange {
-    char name[n_sz];
-    size_t start;
-    size_t end;
-};
+
 
 template <int b_sz, int n> struct ShaderReader {
 
@@ -193,10 +173,16 @@ template <int b_sz, int n> struct ShaderReader {
     int sz = 0;
     bool skip_newln = true;
 
-    StrRange cpy_slots[no_of_ranges];
+    Range curnt_range;
+
+    Range cpy_slots[no_of_ranges];
     ShaderHandel* curnt_element = handel;
     int curnt_indx = 0;
     FILE* file;
+
+    void reset_range() {
+        curnt_range = Range{};
+    }
 
     char get_nxt() {
         int c = fgetc(file);
@@ -217,7 +203,6 @@ template <int b_sz, int n> struct ShaderReader {
     }
 
     inline bool is_nxt_char(const char chr) {
-
         if (skip_whitespc()) {
             PRINT_EXIT("Expected (" << chr << ") before newline");
         }
@@ -228,7 +213,6 @@ template <int b_sz, int n> struct ShaderReader {
         bool hit_newln = false;
         while ((cursr != EOF) && isspace(cursr)) {
             if (cursr == '\n') {
-
                 hit_newln = true;
             }
             get_nxt();
@@ -246,7 +230,6 @@ template <int b_sz, int n> struct ShaderReader {
     }
 
     void cpy_tag_name_at(char* name_dst, bool cheacking_cmd = false) {
-
         if (skip_whitespc()) {
             PRINT_EXIT("No newline character inside tags");
         }
@@ -263,9 +246,7 @@ template <int b_sz, int n> struct ShaderReader {
         while (cursr != '>') {
 
             if (isspace(cursr)) {
-
                 if (cheacking_cmd) break;
-
                 skip_whitespc();
                 if (cursr == '>')
                     break;
@@ -296,7 +277,6 @@ template <int b_sz, int n> struct ShaderReader {
         char* element_name = curnt_element->name;
 
         is_nxt_token_tag("Element tag ");
-
         cpy_tag_name_at(element_name);
 
         curnt_element->start = ln_no;
@@ -305,17 +285,11 @@ template <int b_sz, int n> struct ShaderReader {
 
         for (int i = 0; i < stage_count; i++) {
             is_nxt_token_tag("Element closing or Shader ");
-
             bool is_cls = !skip_whitespc() && cursr == '/';
-
             if (is_cls)
                 get_nxt();
 
             cpy_tag_name_at(name_buff);
-
-            DEBUG_COUT("Element tag name: "
-                << element_name << "  Shader name tag: " << name_buff
-                << "\n");
 
             if (is_cls) {
                 if (strcmp(name_buff, element_name) != 0) {
@@ -328,14 +302,9 @@ template <int b_sz, int n> struct ShaderReader {
                 break;
             }
             else {
-
                 int type_indx = check_subtag(name_buff);
 
                 curnt_element->shdr_line_no[2 * type_indx] = ln_no;
-
-                DEBUG_COUT("active shader: "
-                    << curnt_element->active_shaders[type_indx] << "\n");
-                DEBUG_COUT("active shader profile: \n");
 
                 if ((curnt_element->active_shaders[type_indx]++) > 1) {
                     PRINT_EXIT(
@@ -346,12 +315,6 @@ template <int b_sz, int n> struct ShaderReader {
                         << curnt_element->shdr_line_no[2 * type_indx + 1]
                         << ")");
                 }
-                for (int i = 0; i < stage_count; i++)
-                    DEBUG_COUT(subtag_names[i]
-                        << ": " << curnt_element->active_shaders[i]
-                        << "\n");
-
-                DEBUG_COUT(type_indx << "<-typeindx\n");
 
                 read_shader_content(type_indx, name_buff);
             }
@@ -363,7 +326,6 @@ template <int b_sz, int n> struct ShaderReader {
             get_nxt();
         }
     }
-
 
     bool is_end_or_cmnd() {
         bool tag_end;
@@ -378,9 +340,12 @@ template <int b_sz, int n> struct ShaderReader {
             bool is_pst = !strcmp(cmd_name, cammnd_tags[1]);
 
             if (is_cpy or is_pst) {
-                cpy_tag_name_at(cmd_name);
+                char name[n_sz];
+                cpy_tag_name_at(name);
                 if (is_cpy) {
-
+                    Range cpy_range;
+                    get_content_len(cpy_range.start, cpy_range.end, cpy_range.tg_start);
+                    rangetree.addRange(cpy_range);
                 }
             }
             tag_end = false;
@@ -390,7 +355,6 @@ template <int b_sz, int n> struct ShaderReader {
     }
 
     int get_content_len(int& cntn_start, int& cntn_end, int& tag_start) {
-
         cntn_start = ftell(file) - 1;
         bool cls_found = false;
         bool has_newln;
@@ -426,19 +390,18 @@ template <int b_sz, int n> struct ShaderReader {
     }
 
     template <bool reading_shader>
-    StrRange read_tag_content(int type_indx, char* opn_tg) {
+    void read_tag_content(int type_indx, char* opn_tg) {
 
         int tg_strt;
         int cntn_strt;
         int cntn_end;
-        int len = get_content_len(cntn_strt, cnt, tg_strt);
+        int len = get_content_len(cntn_strt, cntn_end, tg_strt);
 
         if constexpr (reading_shader) {
             curnt_element->
                 shdr_line_no[2 * type_indx + 1] = ln_no;
             // end line of the shader
         }
-
 
         char cls_shdr_tg[max_subtg_name_len];
         cpy_tag_name_at(cls_shdr_tg);
@@ -447,7 +410,6 @@ template <int b_sz, int n> struct ShaderReader {
 
         long tg_len = tg_end - tg_strt;
 
-        DEBUG_COUT(cls_shdr_tg << "<-cls shdr tag\n");
         // int i  = check_subtag(cls_shdr_tg);
 
         if (strcmp(opn_tg, cls_shdr_tg) != 0) {
@@ -461,10 +423,10 @@ template <int b_sz, int n> struct ShaderReader {
         }
 
         size_t sz_read = write_from_at(cntn_strt, len, write_ptr);
-        write_ptr[sz_read / sizeof(char)] = '\0';
-        fseek(file, tg_end, SEEK_SET);
 
-        DEBUG_COUT("[write]" << write_ptr << "[write]\n");
+        if constexpr (reading_shader)
+            write_ptr[sz_read / sizeof(char)] = '\0';
+        fseek(file, tg_end, SEEK_SET);
 
         if constexpr (reading_shader)
         {
@@ -474,11 +436,10 @@ template <int b_sz, int n> struct ShaderReader {
         write_ptr += len + 1;
         mem_left -= (len + 1);
 
-        return { cntn_strt,cn };
     }
 
-    int read_shader_content(int type_indx, char* opn_shdr_tg) {
-        read_tag_content<true>(type_indx, opn_shdr_tg);
+    void read_shader_content(int type_indx, char* opn_shdr_tg) {
+        return read_tag_content<true>(type_indx, opn_shdr_tg);
     }
 
     FILE* open_file(const char* file_name) {
@@ -492,7 +453,6 @@ template <int b_sz, int n> struct ShaderReader {
     ShaderReader() {}
 
     ShaderReader(const char* file_name) {
-
         file = open_file(file_name);
         get_nxt(); //  we need to read first character of file before calling is
         //  whitespc
@@ -543,10 +503,20 @@ char* ShaderHandel::operator[](const char* shdr) {
 }
 
 int main() {
-
     ShaderReader<3000, 2> shader_reader("shaders.h");
 
     // SHADER LOADING
     char* vertex_shader = shader_reader["surface"]["vertex"];
     char* fragment_shader = shader_reader["surface"]["fragment"];
 }
+
+
+
+// Currently: we write into the write_ptr the moment the content is approched 
+// What would be better: parse the content
+// first and then write using range_tree_write 
+// benefit of parsing the whole file in this format is that paring technique would become
+// consistent from top to bottom
+
+// check if the get_content_len can accept the range object every time
+
