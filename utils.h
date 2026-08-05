@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <cstdlib>
 
 constexpr int n_sz = 20;
@@ -7,33 +6,50 @@ constexpr int n_sz = 20;
 #define RESET "\x1b[0m"
 
 
+enum TagType {
+    Entitiy, Shader, Copy, Paste
+};
 
 struct Tag {
 
-    int    opn_tg_strt;
-    int    start;
-    int    end;
-    int    cls_tg_end;
-    char   name[n_sz];
-
+    int      start_ln_no;
+    int      opn_tg_strt;
+    int      start;
+    int      end;
+    int      cls_tg_end;
+    int      end_ln_no;
+    char     name[n_sz];
     Tag* next = nullptr;
     Tag* inside = nullptr;
+    TagType  type;
+
+    Tag() {}
+
+    Tag(char* nme) {
+        strcpy(name, nme);
+    }
 };
+
 
 
 template <int sz, int max_copy_depth>
 struct TagTree {
-    Tag  arr[sz];
-    Tag  root_obj;
+    Tag    arr[sz];
+    Tag    root_obj;
     Tag* root = arr;
     Tag* curnt = root;
-    Stack<max_copy_depth, Tag> rng_stack;
+    Tag* top;
+    Tag    stack[max_copy_depth];
+    int    stk_len = 0;
 
-
-    Tag arr[sz];
-    int stk_len = 0;
+    TagTree() {}
 
     int len = 1;
+
+    void update_top(int x) {
+        top = arr + x;
+        stk_len = x;
+    }
 
     void addRange(Tag obj) {
         if (len >= sz) {
@@ -42,7 +58,6 @@ struct TagTree {
         }
 
         Tag* ptr = top;
-
         while (ptr != nullptr) {
             if (ptr->end < obj.start) {
                 ptr = ptr->next;
@@ -57,20 +72,15 @@ struct TagTree {
         len++;
     }
 
-    void pop() {
-        stk_len--;
-    }
+    void pop() { update_top(stk_len - 1); }
 
     void addStack(Tag obj) {
-        if (len + 1 > sz) {
+        if (len + 1 > sz)
             std::cerr << RED "Max stack length reached\n" RESET;
-        }
-        else {
-            arr[stk_len + 1] = obj;
-            len++;
-        }
-        return arr + stk_len;
+        else
+            update_top(stk_len + 1);
     }
+
 };
 
 
@@ -148,14 +158,6 @@ template <size_t sz, int N> struct ConstexprStr {
     }
 };
 
-constexpr int max_subtg_name_len =
-14; // "tess_control" this is the largest valid subtag name
-constexpr int stage_count = 6;
-ConstexprStr<max_subtg_name_len, stage_count> subtag_names{
-    "vertex,fragment,tess_control,tess_eval,geometry,compute," };
-
-constexpr int cammnds = 2;
-ConstexprStr<max_subtg_name_len, cammnds> cammnd_tags{ "copy,paste," };
 
 
 

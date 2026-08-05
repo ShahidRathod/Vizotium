@@ -1,0 +1,59 @@
+- Change parsing strategy from writing content immediately upon encountering it to parsing the entire file first, then writing via `range_tree_write`.
+- Make parsing consistent from top to bottom by separating parsing from output generation.
+- Check whether `get_content_len()` can accept a `Range` object directly.
+- Eliminate eager writes to `write_ptr`; write only after parsing is complete.
+- Generalize `is_nxt_tkn_tag()` instead of only checking whether the next character is `'<'` and raising an error.
+- Generalize tag name mismatch handling.
+- Reduce or eliminate the system call on every `fget()` step.
+- Stop eagerly writing buffers during object construction.
+- Keep sibling tags (same parent) connected via a linked list.
+- Push a tag onto the stack when entering it.
+- Pop the tag from the stack after it has been fully parsed.
+- Maintain the invariant that the top of the stack always represents the current tag.
+- Ignore content outside the `Shaders` tag (`vertex`, `fragment`, etc.).
+- Use enums for parser layer/state conventions.
+- Buffer the entire input file into memory while parsing.
+- Parse the whole file once so shader content can be retrieved later on demand.
+
+
+[How I am going to do it]:
+
+- The parser returns the Tag named the file.
+
+
+how and where all functions are used:
+
+(1) is_nxt_char : checks where the very next character after the white spaces is a called char - descarded, there is no place where expecting a tag is strict compultion
+   
+(2) skip_whitespc: loops until the char is not end of file and is space ' ' '\n' and all. if a newline is encountered then returns a true.
+
+CRUTIAL: need to change eof to a integer logic 
+
+(3) is_nxt_token_tag() : this seem to irrelevant in the new parse first and then write approach, we dont place a compultion that the file and the entity content with should start with a shader , the content in between is ignored functioning like comments.
+
+(4) cpy_tag_name_at : new approach will defenailty eliminate the ambiguity about where it end and starts : unlike fgets() the char reading is very reversible . cpy_tag_name can be remaned parse_tag_name and consequently that being reflected in code.
+name buffer 
+
+for future : every tag is followed by name rest all are the parameters 
+
+(5) read_element: again here the is_nxt_token_tag will be eliminated 
+the most natural step after the exiting a tag is to search the for next tag or close this 'searching' we will not explicitly searching the a for tags . this the seaching will naturally come from recursive calls every valid tag opened will be closed we place the close logic apporotiately where after we are sure it has to be . 
+
+
+(6) content_loop : small code stays same, need to change the EOF in it.
+
+(7) is_end_or_cmnd() : not every '<' is a close tag or. this function is a mix of ditunguishng code '<' and close tag '<' and handeling the start of copy tag 
+
+(8) get_content_len : the content getting routed to depth = 2 to depth = 3 at the first copy tag is currently within the is_end_or_cmd <- this fucntion will on only check if its really a endtag. for [the file name tag] depth =0 . all all depths excluding wheather there is amguity wheather the next tag is a open or close tag . we are sure about the if its a close then it has to be the tag we are in. at depth equal to 0 1 we dont expect the cmd tag copy and paste <- have to RAISE_WHITESPACE_NOT_ALLOWED error
+
+
+what shader still does: keep record of active_shaders , shader ptr(maybe not)
+
+how do we solve the problem of pasting the content: while the tree is being parsed the we eagrly calculate the true length of the shader content .
+
+
+we will only return a compiled shader and do the malloc 
+
+compile_shader ("entity name", Gl_shader_macro)
+
+maclloc too 
