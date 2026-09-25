@@ -1,483 +1,383 @@
-#include <cstring>
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <cstddef>
+#include <cstring>
+#include <iostream>
+#include "utils.h"
 
+enum class Relation { ordered, notcoexist, norelation, singular };
 
+enum class Inverse { False, True };
 
-// color codes
-
-#define RED   "\x1b[31m"
-#define RESET "\x1b[0m"
-
-
-constexpr int n_sz = 20;
-
-enum class ShaderType : int {
-    Vertex,
-    Fragment,
-    TessControl,
-    TessEval,
-    Geometry,
-    Compute6
-};
-
-enum class TagMode : int { Open, Close };
-enum class TagType : int { Name, Subtag };
-
-template <size_t sz, int N> struct ConstexprStr {
-    static const int size = (sz + 1) * N;
-    char data[size] = { ' ' };
-
-    constexpr ConstexprStr(const char* str) {
-        for (int i = 0; i < size; i++)
-            data[i] = ' ';
-
-        int indx = 0;
-        int n = 0;
-        int j = 0;
-        char c = 0;
-
-        for (int i = 0; i < size && n + j < size; i++) {
-            c = str[i];
-            if (c == '\0')
-                break;
-            else if (c == ',') {
-                data[n + j] = '\0';
-                n = j / sz + 1;
-                j += sz;
-                continue;
-            }
-            data[n + j] = c;
-            n++;
-        }
+struct Rule {
+    char c[3];
+    int c_i[2];
+    Relation relation = Relation::norelation;
+    Inverse inverse = Inverse::False;
+    Rule(const char* chrs, Relation rel, Inverse inv) {
+        c[0] = chrs[0];
+        c[1] = chrs[1];
+        relation = rel;
+        inv = inverse;
     }
 
-    constexpr const char* operator[](int i) const {
-        return &data[(sz + 1) * i];
+    Rule(const char chr, Relation rel, Inverse inv) {
+        c[0] = c[1] = chr;
+        relation = rel;
+        inv = inverse;
     }
+
+    inline constexpr char a() { return c[0]; }
+    inline constexpr char b() { return c[1]; }
 };
 
-constexpr int max_subtg_name_len =
-14; // "tess_control" this is the largest valid subtag name
-constexpr int stage_count = 6;
-ConstexprStr<max_subtg_name_len, stage_count> subtag_names{
-    "vertex,fragment,tess_control,tess_eval,geometry,compute," };
+enum class Dispatch : int { not_tag, open, close, paste, count };
 
-inline int shader_indx(ShaderType shadr) { return static_cast<int>(shadr); }
-inline ShaderType shadr_by_indx(int n) { return static_cast<ShaderType>(n); }
-
-inline const char* tag_string(ShaderType shadr, TagMode tag_t) {
-    int indx = static_cast<int>(shadr) + static_cast<int>(tag_t);
-    return subtag_names[indx];
+constexpr int str_len(const char* str) {
+    int i = 0;
+    while (str[i] != '\0') i++;
+    return i;
 }
 
 
 
+template <int sz>
+struct SyntaxData {
+    int pos[sz] = { 0 };
+    int count[sz] = { 0 };
+    const char* chars = nullptr;
+    int char_count = 0;
+    SyntaxData() {}
+    constexpr SyntaxData(const char(&c)[sz]) { chars = c; }
 
-template <int sz> struct CircularBuff {
-    int len = 0;
-    char arr[sz + 1] = { ' ' };
-
-    CircularBuff() {
-
-        arr[sz] = '\0';
-    }
-    int get_index(int x) { return x % sz; }
-
-    void put_char(char c) {
-        arr[get_index(len)] = c;
-        arr[sz] = '\0';
-        len++;
-    }
-
-    int compare_str(const char* str, int str_len) {
-
-        bool is_equal = true;
-
-        for (int i = 0; i < str_len; i++) {
-            int indx = get_index(len - str_len + i);
-            if (arr[indx] != str[i]) {
-                is_equal = false;
-                break;
-            }
+    constexpr int charindex(const char c) const {
+        for (int i = 0; i < sz && chars[i] != '\0'; i++) {
+            if (chars[i] == c) return i;
         }
-        return is_equal;
+        return -1;
     }
 
-};
+    void reset() {
+        char_count = 0;
+        memset(pos, 0, sizeof(pos));
+        memset(count, 0, sizeof(count));
+    }
 
+    bool eval_char(char c) {
+        int i = charindex(c);
+        if (i != -1) {
+            if (!count[i]) pos[i] = char_count;
+            count[i]++;
+            return true;
+        }
+        return false;
+    }
 
+    int offset(char c) const {
+        int i = charindex(c);
+        if (i != -1) {
+            return (count[i] != 0) * pos[i];
+        }
+        return 0;
+    }
 
+    inline int count_of(const char c) { return count[charindex(c)]; }
 
-struct ShaderHandel {
-    char name[n_sz] = {};
-    int active_shaders[stage_count] = { 0 };
-    int shdr_line_no[stage_count * 2] = { -1 };
-    int start = -1;
-    int end = -1;
-    char* shadr_ptrs[stage_count] = { nullptr };
-
-    char* operator[](const char* shdr);
-
-};
-
-#define PRINT_EXIT(str)                                                        \
-    std::cerr << RED "Shader Loader Error LINE NO:(" << ln_no << "):" << char_no << " " << str <<RESET;     \
-    exit(EXIT_FAILURE);
-
-
-
-
-#define PRINT_EXIT_NO_LINE(str)                                                        \
-    std::cerr << str;        \
-    exit(EXIT_FAILURE);
-
-
-// DEBUG ON OFF
-#define debug_cout_bool
-
-
-#ifdef debug_cout_bool
-#define DEBUG_COUT(str) std::cout << str;
-#else
-#define DEBUG_COUT(str)
-#endif
-
-
-
-static int check_subtag(const char* sbtg_name) {
-    bool found = false;
-
-    int indx = stage_count - 1;
-    while (indx >= 0) {
-        if (strcmp(sbtg_name, subtag_names[indx]) == 0) {
-            DEBUG_COUT(sbtg_name << " " << subtag_names[indx] << "\n");
-            found = true;
+    bool check_relation(Rule spec) {
+        int i_a = charindex(spec.a());
+        int i_b = charindex(spec.b());
+        if (!(count[i_a] && count[i_b])) return true;
+        bool res = true;
+        switch (spec.relation) {
+        case Relation::ordered:
+            res = (pos[i_a] < pos[i_b]);
+            break;
+        case Relation::notcoexist:
+            res = !(count[i_a] && count[i_b]);
+            break;
+        case Relation::singular:
+            res = count[i_a] == 1;
             break;
         }
-        indx--;
+        return static_cast<int>(spec.inverse) ? !res : res;
     }
 
-    if (!found) {
-        PRINT_EXIT_NO_LINE(sbtg_name << " is not a valid subtag name.");
+    template <int r_sz>
+    bool check_rules(Rule(&rules)[r_sz]) {
+        for (int i = 0; i < r_sz;i++) {
+            if (!check_relation(rules[i])) return false;
+        }
+        return true;
     }
+};
 
-    return indx;
-}
+SyntaxData tag_data("</$:_>");
+Rule tag_rule[] = {
+    {"/$",  Relation::notcoexist,Inverse::False},
+    {"/:",  Relation::notcoexist,Inverse::False},
+    {'<',   Relation::singular,  Inverse::False},
+    {'/',   Relation::singular,  Inverse::False},
+    {'$',   Relation::singular,  Inverse::False},
+    {"$:",  Relation::ordered,   Inverse::False},
+    { "$_",  Relation::ordered,  Inverse::False},
+    { ":_",  Relation::ordered,  Inverse::False},
+    { "/_",  Relation::ordered,  Inverse::False}
+};
 
-template <int b_sz, int n> struct ShaderReader {
 
+
+template <int b_sz, int n_sz>
+struct ShaderReader {
     bool at_comnt = false;
     bool in_tag = false;
     char cursr = 0;
     static constexpr int delim_len = 2 * n_sz;
 
-    CircularBuff<delim_len> delim_tkn;
     char buffer[b_sz] = {};
-
     char* write_ptr = buffer;
 
     int ln_no = 1;
     int char_no = 0;
-    int char_no_s = 0;
-    ShaderHandel handel[n];
+
     int mem_left = b_sz;
-    int sz = 0;
+    int reader_sz = 0;
     bool skip_newln = true;
 
-    // this is a fix to a deterministic anamoly 
-    // in read content the every newline cha
-    int new_ln_fix = 0;
-
-    ShaderHandel* curnt_element = handel;
     int curnt_indx = 0;
     FILE* file;
+    long file_sz = 0;
+    int depth = 0;
+    TagTree<50, 10> tgtree;
+    CircularBuff<delim_len> delim_tkn;
+    int active_shaders[stage_count] = { 0 };
+    Tag* currnt_tag = tgtree.top();
 
-    char get_nxt() {
-        int c = fgetc(file);
-        cursr = (char)c;
+    GLuint program;
+    ShaderReader() {}
 
-        if (delim_tkn.compare_str(R"(\\)", 2)) at_comnt = true;
-
-        if (cursr == '\n') {
-
-            ln_no++;
-            new_ln_fix++;
-            at_comnt = false;
-        }
-
-
-        if (c!=' ') delim_tkn.put_char(c);
-        char_no_s++;
-        return c;
+    void inscope(TagPos new_tag_pos) {
+        Tag* old_scope = tgtree.top();
+        Tag* new_tag = tgtree.make_tag();
+        new_tag->open = new_tag_pos;
+        old_scope->addInside(new_tag);
+        tgtree.addStack(new_tag);
+        currnt_tag = tgtree.top();
+        bool v = currnt_tag == new_tag;
+        depth++;
     }
 
-    inline bool is_nxt_char(const char chr) {
+    void outscope(TagPos old_tag_pos) {
+        currnt_tag->close = old_tag_pos;
+        currnt_tag->commit_name();
+        tgtree.pop();
+        currnt_tag = tgtree.top();
+        depth--;
+    }
 
-        if (skip_whitespc()) {
-            PRINT_EXIT("Expected (" << chr << ") before newline");
+    hashT currnt_tag_hash() { return currnt_tag->tag_hash; }
+
+    char get_nxt() {
+        int c = buffer[char_no];
+        cursr = (char)c;
+        if (delim_tkn.compare_str(R"(\\)", 2)) at_comnt = true;
+        if (cursr == '\n') {
+            ln_no++;
+            at_comnt = false;
         }
-        return cursr == chr;
+        if (c != ' ') delim_tkn.put_char(c);
+        char_no++;
+        return c;
     }
 
     bool skip_whitespc() {
         bool hit_newln = false;
-        while ((cursr != EOF) && isspace(cursr)) {
-            if (cursr == '\n') {
-
-                hit_newln = true;
-            }
+        while (isspace(cursr)) {
+            if (cursr == '\n') hit_newln = true;
             get_nxt();
         }
         return hit_newln;
     }
 
-    void is_nxt_token_tag(const char* err_msg) {
-        skip_whitespc();
-        if (cursr != '<') {
-            PRINT_EXIT(err_msg << "was expected before: " << (int)cursr << cursr
-                << "\n");
-        }
-        get_nxt();
-    }
-
-    void cpy_tag_name_at(char* name_dst) {
-        char temp_name[n_sz] = {};
-
+    char cpy_tag_str(char* dst, bool expect_spc, const char* end_delim) {
         if (skip_whitespc()) {
-            PRINT_EXIT("No newline character inside tags");
+            RAISE_NO_NEWLINE_INSIDE_TAGS;
         }
-        // firt character in tag after the whitespace being skipped is first
-        // character of name
+
         if (!isalpha(cursr)) {
-            PRINT_EXIT(
-                "Shader name cannot start with special character or number:"
-                << cursr << "\n");
+            RAISE_SHADER_NAME_INVALID_START(cursr);
         }
 
         int t_name_indx = 0;
-        while (cursr != '>') {
+        char temp_name[n_sz] = {};
 
+        while (!contains(cursr, end_delim)) {
             if (isspace(cursr)) {
+                if (!expect_spc) break;
                 skip_whitespc();
-                if (cursr == '>')
+                if (contains(cursr, end_delim))
                     break;
-                else
-                    PRINT_EXIT("Shader name has whitespace in between ");
+                else {
+                    RAISE_SHADER_NAME_HAS_WHITESPACE;
+                }
             }
             if (t_name_indx >= n_sz) {
-                PRINT_EXIT("Shader name exceeds the name buffer size"
-                    << n_sz << " name= " << temp_name << "\n");
+                RAISE_SHADER_NAME_TOO_LONG(n_sz, dst);
             }
-
             if (isalnum(cursr) == 0 && cursr != '_') {
-                PRINT_EXIT("Shader has very special character in "
-                    "between:"
-                    << cursr << "\n");
+                RAISE_SHADER_NAME_INVALID_CHAR(cursr);
             }
-
             temp_name[t_name_indx++] = cursr;
             get_nxt();
         }
-
+        char end_char = cursr;
         get_nxt();
-        temp_name[t_name_indx + 1] = '\n';
-        strcpy(name_dst, temp_name);
+        strcpy(dst, temp_name);
+        dst[t_name_indx + 1] = '\n';
+        return end_char;
     }
 
-    void read_element() {
-        char* element_name = curnt_element->name;
+    void parse_tag_cls() {
+        cpy_tag_str(currnt_tag->buffer, false, ">");
+        currnt_tag->check_end_same(char_no, ln_no);
+    }
 
-        is_nxt_token_tag("Element tag ");
-        cpy_tag_name_at(element_name);
+    void parse_tag_open() {
+        cpy_tag_str(currnt_tag->buffer, false, ">");
+        currnt_tag->commit_hash();
+        currnt_tag->commit_name();
+        char* first_str = currnt_tag->tag_name;
+    }
 
-        curnt_element->start = ln_no;
+    void parse_paste() {
+        currnt_tag->type = TagType::Paste;
+        while (true) {
+            char end = cpy_tag_str(currnt_tag->buffer, false, ":>");
+            currnt_tag->append_hash_lnk();
+            if (end == '>') break;
+        }
 
-        char name_buff[n_sz] = {};
-
-        for (int i = 0; i < stage_count; i++) {
-            is_nxt_token_tag("Element closing or Shader ");
-
-            bool is_cls = !skip_whitespc() && cursr == '/';
-
-            if (is_cls) get_nxt();
-
-            cpy_tag_name_at(name_buff);
-
-            DEBUG_COUT("Element tag name: " << element_name
-                << "  Shader name tag: " << name_buff << "\n");
-
-            if (is_cls) {
-                if (strcmp(name_buff, element_name) != 0) {
-                    PRINT_EXIT("Element("
-                        << curnt_indx << "): open tag-" << element_name
-                        << " does not match close tag-" << name_buff);
-                }
-
-                curnt_element->end = ln_no;
-                break;
-            }
-            else {
-
-                int type_indx = check_subtag(name_buff);
-
-                curnt_element->shdr_line_no[2 * type_indx] = ln_no;
-
-                DEBUG_COUT("active shader: "
-                    << curnt_element->active_shaders[type_indx] << "\n");
-                DEBUG_COUT("active shader profile: \n");
-
-
-                if ((curnt_element->active_shaders[type_indx]++) > 1) {
-                    PRINT_EXIT("Shader: "
-                        << name_buff << " Element: " << curnt_element->name
-                        << " is already defined line at ("
-                        << curnt_element->shdr_line_no[2 * type_indx] << ", "
-                        << curnt_element->shdr_line_no[2 * type_indx + 1]
-                        << ")");
-                }
-                for (int i = 0; i < stage_count; i++) DEBUG_COUT(subtag_names[i] << ": " << curnt_element->active_shaders[i] << "\n");
-
-                DEBUG_COUT(type_indx << "<-typeindx\n");
-
-                read_content(type_indx, name_buff);
-            }
+        HashLinkT hash_link = currnt_tag->hash_lst;
+        Tag* tg_found = tgtree.find(hash_link);
+        currnt_tag->addInside(tg_found);
+        bool paste_in_itself = tgtree.find_in_branch(tg_found->inside, (hash_link.end), true);
+        if (paste_in_itself) {
+            RAISE_RECURSIVE_PASTING;
         }
     }
 
+    Dispatch check_tag_syntax(TagPos& tag_pos) {
+        tag_data.reset();
+        int temp_char_no = char_no;
+        bool temp_in_comnt = at_comnt;
+        int temp_ln_no = ln_no;
 
-    void content_loop() {
-
-
-        while ((cursr != '<' && !at_comnt) && cursr != EOF) {
+        while (true) {
+            bool is_special = !isalnum(cursr) && cursr != ' ';
+            if (is_special && !tag_data.eval_char(cursr)) return Dispatch::not_tag;
+            tag_data.char_count++;
+            if (cursr == '>') break;
             get_nxt();
         }
+
+        bool is_tag = tag_data.check_rules(tag_rule);
+        bool is_paste = tag_data.count_of('$');
+        bool is_cls = tag_data.count_of('/');
+
+        Dispatch dis_type = static_cast<Dispatch> (is_tag + 1 * is_cls + 2 * is_paste);
+
+        if (dis_type != Dispatch::not_tag) {
+            tag_pos.start = temp_char_no - 1;
+            tag_pos.end = char_no;
+            tag_pos.ln_no = temp_ln_no;
+
+            char_no = temp_char_no + tag_data.offset('/') + tag_data.offset('$');
+            get_nxt();
+            cursr;
+            at_comnt = temp_in_comnt;
+            ln_no = temp_ln_no;
+        }
+        return dis_type;
     }
 
+    void loop() {
+        while ((cursr != '<' && !at_comnt) && cursr != '\0') get_nxt();
+    }
 
-    int read_content(int type_indx, char* opn_shdr_tg) {
-        new_ln_fix = 0;
-        
-        long cntn_strt = ftell(file) - 1;
-        long cntn_end;
-        bool cls_found = false;
-        bool has_newln;
-
-        do { 
-
-            content_loop();
-            cntn_end = ftell(file) - 1;
-            get_nxt(); // to get past the '<'
-            has_newln = skip_whitespc();
-
-        } while ( cursr!= '/');
-
-       
-        if (has_newln) PRINT_EXIT("No newline character inside tags\n");
-
-        long tg_strt = ftell(file);
-        long len = cntn_end - cntn_strt - new_ln_fix;
-
-        get_nxt(); // to make the cursr past the '/' charater 
-        //because in the cpt_tag_name_at has skip_whitepsc 
-        // and it will terminate immediately if the cursr is not a whitespc
-
-        curnt_element->shdr_line_no[2 * type_indx + 1] = ln_no;
-        char cls_shdr_tg[max_subtg_name_len];
-        cpy_tag_name_at(cls_shdr_tg);
-
-        long tg_end = ftell(file);
-
-        long tg_len = tg_end - tg_strt;
-
-        DEBUG_COUT(cls_shdr_tg << "<-cls shdr tag\n");
-        // int i  = check_subtag(cls_shdr_tg);
-
-        if (strcmp(opn_shdr_tg, cls_shdr_tg) != 0) {
-            PRINT_EXIT("Close tag subtag name:" << cls_shdr_tg
-                << " does not match with "
-                << opn_shdr_tg << "\n");
-        }
-
-        if (mem_left < len - 1) {
-            PRINT_EXIT("INSUFFICIENT SPACE \n");
-        }
-
-        fseek(file, cntn_strt, SEEK_SET);
-        size_t sz_read = fread(write_ptr, sizeof(char), len, file);
-
-        write_ptr[sz_read / sizeof(char)] = '\0';
-
-        fseek(file, tg_end, SEEK_SET);
-
-        DEBUG_COUT("[write]" << write_ptr << "[write]\n");
-
-        curnt_element->shadr_ptrs[type_indx] = write_ptr;
-        write_ptr += len + 1;
-        mem_left -= (len + 1);
-        return len;
+    void content_loop() {
+        do {
+            loop();
+            TagPos tag_pos;
+            Dispatch type = check_tag_syntax(tag_pos);
+            switch (type) {
+            case (Dispatch::open):
+                inscope(tag_pos);
+                parse_tag_open();
+                break;
+            case Dispatch::close:
+                parse_tag_cls();
+                outscope(tag_pos);
+                break;
+            case Dispatch::paste:
+                inscope(tag_pos);
+                parse_paste();
+                outscope(tag_pos);
+                break;
+            }
+        } while ((cursr != '\0'));
     }
 
     FILE* open_file(const char* file_name) {
-        FILE* file = fopen(file_name, "r");
-        if (!file) {
-            PRINT_EXIT("File not found.");
-        }
-        return file;
+        FILE* f = fopen(file_name, "r");
+        if (!f) RAISE_FILE_NOT_FOUND;
+        return f;
     }
 
-    ShaderReader() {}
-
-    ShaderReader(const char* file_name) {
-
+    ShaderReader(const char* file_name, GLint prog) {
+        program = prog;
         file = open_file(file_name);
-        get_nxt(); //  we need to read first character of file before calling is
-        //  whitespc
-        // else the isspace(cursr = 0) == false and loop will not
-        // continue and nxt_token_tag is get cursr as 0 and its not
-        // '<' out error 
+        fseek(file, 0, SEEK_END);
+        file_sz = ftell(file) - 1;
+        fseek(file, 0, SEEK_SET);
+        if (file_sz >= b_sz) RAISE_INSUFFICIENT_SPACE;
 
-        for (int shader_indx = 0; shader_indx < n; shader_indx++) {
-            skip_whitespc();
-            if (cursr == EOF) {
-                PRINT_EXIT(
-                    "Not all shaders are present. recent shader read was "
-                    << handel[shader_indx].name
-                    << " -with shader index = " << shader_indx);
-            }
-            read_element();
-            curnt_element++;
-            curnt_indx++;
-        }
+        fread(buffer, sizeof(char), file_sz, file);
+        fclose(file);
+        strcpy(currnt_tag->tag_name, file_name);
+        currnt_tag->append_hash_lnk();
+
+        get_nxt();
+        content_loop();
     }
+    
+    void compile_shader_for(const char* enitity, GLenum type) {
+        
+        int index = GLshader_to_index(type);
+     
+        HashNode enitiyNode, shaderNode;
+        enitiyNode.val = hash(enitity);
+        shaderNode.val = all_names.hashes[index];
+        enitiyNode.next = &shaderNode;
+        shaderNode.next = nullptr;
 
+        Tag* found = tgtree.find_in_branch(tgtree.root, &enitiyNode);
+        TagWriter writer(buffer, found);
+        GLuint compiled_shader = compile_shader(type,writer.dst);
 
-    ShaderHandel& operator[](const char* str) {
-        int elmen_indx = 0;
-        bool found = false;
+        glAttachShader(program,compiled_shader);
 
-        for (int i = 0; i < n; i++) {
-            if (strcmp(str, handel[i].name) == 0) {
-                found = true;
-                elmen_indx = i;
-                break;
-            }
+        GLint success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+
+        if (!success) {
+            char log[1024];
+            glGetProgramInfoLog(program, 1024, nullptr, log);
+            std::cerr << log << '\n';
         }
-
-        if (!found) {
-            PRINT_EXIT("'" << str << "' is not a Element of ShaderHandel\n");
-        }
-
-        return handel[elmen_indx];
+        glDeleteShader(compiled_shader);
     }
 };
 
-char* ShaderHandel::operator[](const char* shdr) {
-    int indx = check_subtag(shdr);
-    if (active_shaders[indx] == 0) {
-        PRINT_EXIT_NO_LINE(shdr << " is not a active shader of " << name);
-    }
-    return shadr_ptrs[indx];
-}

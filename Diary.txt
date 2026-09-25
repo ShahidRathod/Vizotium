@@ -151,3 +151,27 @@ that function will require vbo and XSZ and YSZ as dimensions as templates parame
 
 we are now making vao_coords_setuo the member variable of class glDrawobject
 vao_coords_setup not just take the upload vbo buffer as a template parameter but is dependent on the class state variables which is product set (shared,upload)*(VAO ,VBO ,EBO), the vbo and ebo array will also be establised as a member variables before we call the vao_coords setup - this way we dont have to paas the long list of parameter the ugly way .
+
+
+
+[1/8/2026]
+
+
+[The shader reader]
+
+I need to a copy and paste tag. so that I can use functions acroos shaders.
+
+the Shader assumes that '<' is always followed by a vertex name .because of this we cant use any comparisons 
+
+
+[the Vertex_Id implementation]
+
+First the grid will be implemented with Vertex_Ids. then the surface.
+
+[3/8/26]
+
+How new Range objects was added earlier : current every object added finded the current bottom most range we are in by the comparions . but the parser already has knows the which botoom most range were in . this could be just done by stack dsa  
+
+
+
+

@@ -12,7 +12,6 @@
 struct SetupState {
     bool new_vbo;
     bool new_ebo;
-
     int loc;
 };
 
@@ -36,8 +35,6 @@ template <SetupState state> struct GLDrawHandel {
         }
 
         glGenVertexArrays(1, &VAO);
-
-
         glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO); // Shared or not - we always make the

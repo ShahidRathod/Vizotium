@@ -18,8 +18,7 @@ inline int pow2(int n) { return 1 << n; };
 template <int k>
 struct inverseFFT {
     static constexpr int sz = 1 << k;
-
-    static ComplexT omega[sz];
+    ComplexT omega[sz];
     ComplexT* output = nullptr;
     ComplexT* input = nullptr;
 
@@ -28,6 +27,7 @@ struct inverseFFT {
     inverseFFT(ComplexT* inp, ComplexT* out) {
         input = inp;
         output = out;
+        set_omega();
     }
 
     void set_omega() {
@@ -41,16 +41,17 @@ struct inverseFFT {
     }
 
     void fft(int n, int s, ComplexT* write) {
-
         if (n == 1) {
             write[0] = input[s];
             return;
         }
+
         int n2 = n / 2;
         ComplexT* odd = write + n2;
         ComplexT* even = odd + n2 / 2;
         fft(n2, s, odd);
         fft(n2, s + 1, even);
+
         for (int i = 0; i < n2; i++) {
             ComplexT ei = even[i] * omega[(i * sz / n2) % sz];
             ComplexT oi = odd[i];
@@ -61,6 +62,7 @@ struct inverseFFT {
 
 };
 
+
 template <int k>
 struct ComplexNoise {
     static constexpr int sz = 1 << k;
@@ -68,10 +70,9 @@ struct ComplexNoise {
 
     ComplexT noise[arr_sz];
     float spectral_bias[arr_sz];
-    static ComplexT fx[sz], fy[sz], fft_buffer[3 * (sz * sz)];
+    ComplexT fx[sz], fy[sz], fft_buffer[3 * (sz * sz)];
 
-    inverseFFT<k> fftx{ noise,fx };
-    inverseFFT<k> ffty{ fx,fy };
+    inverseFFT<k> fftx, ffty;
 
     std::random_device seed_gen;
     std::normal_distribution<float> normal{ 0, 1 };
@@ -81,8 +82,6 @@ struct ComplexNoise {
     void gen_seed() {
         seed = seed_gen();
     }
-
-
 
     void inverse_fft() {
         fftx.eval_fft();
@@ -108,6 +107,8 @@ struct ComplexNoise {
     }
 
     ComplexNoise() {
+        inverseFFT<k> fftx{ noise, fx }, ffty{ fx, fy };
+
         gen_seed();
         init_arr();
         std::fill(spectral_bias, spectral_bias + arr_sz, 1);
@@ -117,5 +118,4 @@ struct ComplexNoise {
 int main() {
     ComplexNoise<4> cn;
     cn.inverse_fft();
-
 }
