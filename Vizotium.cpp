@@ -69,12 +69,12 @@ constexpr int grid_sz_sq = grid_sz * grid_sz;
 
 // ----- random fields -----------
 static ComplexNoise<grid_pow> noise;
-static float rndm_field[grid_sz_sq];
+static VBO<grid_sz_sq> rndm_field;
 
 void make_random_field() { 
     noise.init_noise();
     noise.fft.inverse_fft();
-    noise.output_grayscale(rndm_field);
+    noise.output_grayscale(rndm_field.data);
 }
 //---------------------------
 
@@ -124,8 +124,11 @@ int main() {
     glUseProgram(program);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
-
+    
+    rndm_field.init();
+    
     while (!glfwWindowShouldClose(window)) {
+
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

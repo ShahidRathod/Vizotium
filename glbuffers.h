@@ -1,17 +1,19 @@
 #include <glad/glad.h>
 
-
-
-template <int N, typename T> struct ZeroSafeArray { T data[N]; };
-template <typename T> struct ZeroSafeArray<0,T> {};
+template <int N, typename T> struct ZeroSafeArray {
+	T data[N];
+	ZeroSafeArray() {}
+};
+template <typename T> struct ZeroSafeArray<0,T> {
+	ZeroSafeArray() {}
+};
 
 template <int N, typename T,GLuint buffer_type> 
 struct GlBuffer : ZeroSafeArray<N,T> {
-
 	GLuint id;
-	GlBuffer() { 
+	void init() { 
 		if constexpr (N > 0) {
-			glGenBuffers(1, &id);
+			glGenBuffers(1,&id);
 		}
 	}
 
@@ -24,24 +26,19 @@ struct GlBuffer : ZeroSafeArray<N,T> {
 };
 
 template<int N>
-using VBOBase = GlBuffer<N, float, GL_ARRAY_BUFFER>;
+using VBO = GlBuffer<N, float, GL_ARRAY_BUFFER>;
 
-template <int N>
-struct VBO : VBOBase<N> {
-	int location;
-	VBO(int loc) : VBOBase<N>() {
-		location = loc;
-	}
-
-};
 
 template <int N, typename T, GLuint buffer_type>
 void bindbuffer(GlBuffer<N,T,buffer_type> buff) {
-	glBindBuffer(buffertype,buff.id);
+	glBindBuffer(buffer_type,buff.id);
 }
 
 template <int N>
 using EBO = GlBuffer<N, float, GL_ELEMENT_ARRAY_BUFFER>;
+
+
+
 
 template <int N,typename T>
 void give_attribute_at(VBO<N>& vbo , int count, int stride , int loc) {
@@ -55,7 +52,7 @@ void give_attribute_at(VBO<N>& vbo , int count, int stride , int loc) {
 		nullptr
 	);
 
-	glEnableVertexAttribArray(state.loc);
+	glEnableVertexAttribArray(loc);
 }
 
 
@@ -64,3 +61,54 @@ void give_attribute_at(VBO<N>& vbo, EBO<N>& ebo, int count, int stride, int loc)
 	bindbuffer(ebo);
 	bindbuffer<T>(vbo,count,stride,loc);
 }
+
+
+template<int VN , int EN>
+struct DrawHandel {
+
+	VBO<VN>* vbo;
+	EBO<EN>* ebo = nullptr;
+	GLuint vao_id;
+
+
+	DrawHandel(VBO<VN>& vb = nullptr,EBO<EN>& eb = nullptr) {
+		vbo = &vb;
+		ebo = &eb;
+		glGenVertexArrays(1, &vao_id);
+	}
+
+	void bind_draw_buffer() {
+		if (vbo) bindbuffer(vbo);
+		if (ebo) bindbuffer(ebo);
+
+	}
+
+	template <typename T>
+	void give_attribute_at(int count, int stride, int loc) {
+		bind_draw_buffer();
+
+		glBindVertexArray(VAO);
+		glVertexAttribPointer(
+			loc,
+			sizeof(T) / sizeof(float),
+			GL_FLOAT,
+			GL_FALSE,
+			sizeof(T),
+			nullptr
+		);
+
+		glEnableVertexAttribArray(loc);
+	}
+
+	void draw(int draw_count  = -1) {
+		if (draw_count = -1) draw_count = EN;
+		glBindVertexArray(VAO);
+		glDrawElements(
+			GL_TRIANGLES, // our fundamental draw is triangle
+			draw_count,
+			GL_UNSIGNED_INT,
+			(void*)(0)
+		);
+	}
+};
+

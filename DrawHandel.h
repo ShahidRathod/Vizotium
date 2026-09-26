@@ -9,30 +9,13 @@
 #include <cstring>
 
 
-struct SetupState {
-    bool new_vbo;
-    bool new_ebo;
-    int loc;
-};
 
-template <SetupState state> struct GLDrawHandel {
+struct GLDrawHandel {
+
     GLuint VBO, VAO, EBO;
-    MeshData data;
 
     inline void vao_setup(GLuint s_vbo,GLuint s_ebo) {
 
-        if constexpr (state.new_vbo) {
-            glGenBuffers(1, &VBO);
-        }
-        else {
-            VBO = s_vbo;
-        }
-        if constexpr (state.new_ebo) {
-            glGenBuffers(1, &EBO);
-        }
-        else {
-            EBO = s_ebo;
-        }
 
         glGenVertexArrays(1, &VAO);
         glBindVertexArray(VAO);
