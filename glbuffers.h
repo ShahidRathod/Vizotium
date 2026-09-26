@@ -28,6 +28,18 @@ struct GlBuffer : ZeroSafeArray<N,T> {
 template<int N>
 using VBO = GlBuffer<N, float, GL_ARRAY_BUFFER>;
 
+template <int N>
+struct MappedVBO : VBO<N> {
+
+	MappedVBO(GLuint access) : VBO<N>() {
+		glMapBuffer(this->id,access);
+	}
+
+	void commit_data() {
+		
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	}
+};
 
 template <int N, typename T, GLuint buffer_type>
 void bindbuffer(GlBuffer<N,T,buffer_type> buff) {
@@ -87,7 +99,7 @@ struct DrawHandel {
 	void give_attribute_at(int count, int stride, int loc) {
 		bind_draw_buffer();
 
-		glBindVertexArray(VAO);
+		glBindVertexArray(vao_id);
 		glVertexAttribPointer(
 			loc,
 			sizeof(T) / sizeof(float),
@@ -102,7 +114,7 @@ struct DrawHandel {
 
 	void draw(int draw_count  = -1) {
 		if (draw_count = -1) draw_count = EN;
-		glBindVertexArray(VAO);
+		glBindVertexArray(vao_id);
 		glDrawElements(
 			GL_TRIANGLES, // our fundamental draw is triangle
 			draw_count,
