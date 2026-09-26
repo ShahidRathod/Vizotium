@@ -8,7 +8,7 @@
 #include "OpenGLSetup.h"
 #include "Camera.h"
 #include "Surface.h"
-//#include "DrawHandel.h"
+#include "DrawHandel.h"
 
 //---------------------
 
@@ -71,10 +71,18 @@ constexpr int grid_sz_sq = grid_sz * grid_sz;
 static ComplexNoise<grid_pow> noise;
 static VBO<grid_sz_sq> rndm_field;
 
-void make_random_field() { 
+void make_new_field() {
     noise.init_noise();
     noise.fft.inverse_fft();
     noise.output_grayscale(rndm_field.data);
+}
+
+void make_random_field() { 
+    make_new_field();
+    rndm_field.bind();
+    void* dst = rndm_field.map_full(GL_MAP_FLUSH_EXPLICIT_BIT);
+
+
 }
 //---------------------------
 
@@ -113,7 +121,7 @@ int main() {
 
     GLuint program = glCreateProgram();
     ShaderReader<4000, 64> reader("shaders.h",program);
-    reader.tgtree.root;
+  
 
     reader.compile_shader_for("surface", GL_VERTEX_SHADER);
     reader.compile_shader_for("surface",GL_FRAGMENT_SHADER);
@@ -121,12 +129,18 @@ int main() {
     // UNIFORMS
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
 
+
     glUseProgram(program);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
-    
-    rndm_field.init();
-    
+
+    rndm_field.init_gl_buffer();
+    make_new_field();
+
+    //DrawHandel<grid_sz,0> grid_draw{&rndm_field};
+
+    rndm_field.upload_persistant(GL_DYNAMIC_DRAW);
+
     while (!glfwWindowShouldClose(window)) {
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
