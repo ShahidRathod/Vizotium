@@ -360,10 +360,15 @@ struct ShaderReader {
         HashNode enitiyNode, shaderNode;
         enitiyNode.val = hash(enitity);
         shaderNode.val = all_names.hashes[index];
+        const char* shader_name = all_names[index];
         enitiyNode.next = &shaderNode;
         shaderNode.next = nullptr;
 
         Tag* found = tgtree.find_in_branch(tgtree.root, &enitiyNode);
+        if (!found) {
+            SHADER_NOT_FOUND(shader_name,enitity);
+        }
+
         TagWriter writer(buffer, found);
         GLuint compiled_shader = compile_shader(type,writer.dst);
 
