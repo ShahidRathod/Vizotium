@@ -69,7 +69,7 @@ constexpr int grid_sz_sq = grid_sz * grid_sz;
 
 // ----- random fields -----------
 static ComplexNoise<grid_pow> noise;
-static VBO<grid_sz_sq> rndm_field;
+static VBO<grid_sz_sq*2> rndm_field;
 
 void make_new_field() {
     noise.init_noise();
@@ -120,11 +120,11 @@ int main() {
     GLFWwindow* window = make_window();
 
     GLuint program = glCreateProgram();
-    ShaderReader<4000, 64> reader("shaders.h",program);
-  
+    ShaderReader<4000, 64> reader("shaders.xml",program);
 
-    reader.compile_shader_for("surface", GL_VERTEX_SHADER);
-    reader.compile_shader_for("surface",GL_FRAGMENT_SHADER);
+
+    reader.compile_shader_for("heightmap", GL_VERTEX_SHADER);
+    reader.compile_shader_for("heightmap",GL_FRAGMENT_SHADER);
 
     // UNIFORMS
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
@@ -137,7 +137,21 @@ int main() {
     rndm_field.init_gl_buffer();
     make_new_field();
 
-    //DrawHandel<grid_sz,0> grid_draw{&rndm_field};
+    GLuint grid_vao;
+    glGenVertexArrays(1, &grid_vao);
+    glBindVertexArray(grid_vao);
+
+    glVertexAttribPointer(
+        0,
+        sizeof(rndm_field.data),
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(float),
+        nullptr
+    );
+
+    glEnableVertexAttribArray(0);
+
 
     rndm_field.upload_persistant(GL_DYNAMIC_DRAW);
 
