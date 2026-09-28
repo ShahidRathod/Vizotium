@@ -1,25 +1,16 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <math.h>
+#include <iostream>
 #include <cstdlib>
 
-
-// DO NOT reorder these include
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "OpenGLSetup.h"
-#include "Camera.h"
-#include "Surface.h"
-#include "DrawHandel.h"
-
-//---------------------
-
-#include "Shapes.h"
+#include "glbuffers.h"
 #include "ShaderLoader.h"
 #include "Gaussian.h"
-#include "glbuffers.h"
 
-using std::cerr;
-using std::cout;
-
+using std::cout, std::cerr;
 
 Camera camera{};
 
@@ -46,11 +37,70 @@ TimeObj Time{};
 
 void update_MVP_n_send(GLuint mvp_location) {
     glm::mat4 mvp = camera.update_MVP();
-
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
 }
 
 
+
+struct Vertex {
+    float x, y, z;
+};
+
+struct Tri {
+    Vertex p1, p2, p3;
+};
+
+struct StripQuad {
+    Vertex p1, p2, p3, p4;
+};
+
+
+
+VBO<1, StripQuad> vbo;
+StripQuad strip_quad = {
+    {  0.0f,  0.0f, 0.0f },
+    {  0.0f,  1.0f, 0.0f },
+    {  1.f,   1.f, 0.0f },
+    {  0.f,   1.f, 0.0f },
+
+};
+
+
+float* gridmap;
+
+VBO<2, Vertex> mapPos;
+Vertex mapPos_data[] = { {-0.5,-0.5,0}, {0.5,-0.5,0} };
+Vertex* mappos_ptr;
+
+float mapscale[2] = { 0.1,0.1 };
+
+constexpr int grid_pow = 8;
+constexpr int grid_sz = 1 << 8;
+constexpr int grid_sz_sq = grid_sz * grid_sz;
+
+
+// ----- random fields -----------
+static ComplexNoise<grid_pow> noise;
+static PlainVBO<grid_sz_sq * 2> rndm_field;
+
+void make_new_field() {
+    noise.init_noise();
+    noise.fft.inverse_fft();
+    noise.output_grayscale(rndm_field.data);
+}
+
+void make_random_field() {
+    make_new_field();
+    rndm_field.bind();
+    void* dst = rndm_field.map_full(GL_MAP_FLUSH_EXPLICIT_BIT);
+
+
+}
+
+
+void map_func() {
+    gridmap[2] += 0.01; ;
+}
 
 #define KEY_FUNC_HLPR(key, func)                      \
     (glfwGetKey(win, GLFW_KEY_##key) == GLFW_PRESS) { \
@@ -62,38 +112,12 @@ void update_MVP_n_send(GLuint mvp_location) {
 #define KEY_FUNC_ELSE_IF(key, func) else if KEY_FUNC_HLPR (key, func)
 #define KEY_FUNC_IF(key, func) if KEY_FUNC_HLPR (key, func)
 
-constexpr int grid_pow = 8;
-constexpr int grid_sz = 1 << 8;
-constexpr int grid_sz_sq = grid_sz * grid_sz;
-
-
-// ----- random fields -----------
-static ComplexNoise<grid_pow> noise;
-static VBO<grid_sz_sq*2> rndm_field;
-
-void make_new_field() {
-    noise.init_noise();
-    noise.fft.inverse_fft();
-    noise.output_grayscale(rndm_field.data);
-}
-
-void make_random_field() { 
-    make_new_field();
-    rndm_field.bind();
-    void* dst = rndm_field.map_full(GL_MAP_FLUSH_EXPLICIT_BIT);
-
-
-}
-//---------------------------
 
 bool process_input(GLFWwindow* win, Camera& cam) {
     bool key_press = false;
 
     KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
         KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
-        // KEY_FUNC_ELSE_IF(LEFT, cam.shift_x_by(-0.1f))
-        // KEY_FUNC_ELSE_IF(RIGHT, cam.shift_x_by(0.1f))
-
         KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
         KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
         KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
@@ -101,6 +125,7 @@ bool process_input(GLFWwindow* win, Camera& cam) {
 
         KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.1f))
         KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
+        KEY_FUNC_ELSE_IF(3, map_func())
 
         KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
         KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
@@ -112,53 +137,85 @@ bool process_input(GLFWwindow* win, Camera& cam) {
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
 
 
-
-
-int main() {
-
+int main()
+{
     mat_debug = false;
+    memcpy(vbo.data,&strip_quad,sizeof(strip_quad));
+    memcpy(mapPos.data, &mapPos_data, sizeof(mapPos_data));
+
     GLFWwindow* window = make_window();
 
     GLuint program = glCreateProgram();
-    ShaderReader<4000, 64> reader("shaders.xml",program);
+    ShaderReader<4000, 64> reader("shaders.h", program);
 
 
     reader.compile_shader_for("heightmap", GL_VERTEX_SHADER);
-    reader.compile_shader_for("heightmap",GL_FRAGMENT_SHADER);
+    reader.compile_shader_for("heightmap", GL_FRAGMENT_SHADER);
 
-    // UNIFORMS
-    GLuint mvpLoc = glGetUniformLocation(program, "MVP");
+    linkprogram(program);
 
-
-    glUseProgram(program);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
 
-    rndm_field.init_gl_buffer();
-    make_new_field();
+    // UNIFORMS
+    // UNIFORMS
+    GLuint mvpLoc = glGetUniformLocation(program, "MVP");
+    GLuint map_scaleLoc = glGetUniformLocation(program, "scale");
+   
+    GLuint vaos[3];
+    GLuint& vao = vaos[0];
+    GLuint& mapscalevao = vaos[1];
+    GLuint& mapoffsetvao = vaos[2];
 
-    GLuint grid_vao;
-    glGenVertexArrays(1, &grid_vao);
-    glBindVertexArray(grid_vao);
+    glGenVertexArrays(3,vaos);
+
+
+    glBindVertexArray(vao);
+ 
+    vbo.init_buffer();
+    mapPos.init_buffer();
+
+    vbo.bind();
+    vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    gridmap = (float*)vbo.map_full();
 
     glVertexAttribPointer(
         0,
-        sizeof(rndm_field.data),
+        3,
         GL_FLOAT,
         GL_FALSE,
-        sizeof(float),
+        sizeof(Vertex),
         nullptr
     );
 
+    glVertexAttribDivisor(0, 0);
     glEnableVertexAttribArray(0);
+ 
+
+    mapPos.bind();
+    mapPos.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    mappos_ptr = (Vertex*)vbo.map_full();
 
 
-    rndm_field.upload_persistant(GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(
+        2,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(Vertex),
+        nullptr 
+    );
+    
+    glVertexAttribDivisor(2, 1);
+    glEnableVertexAttribArray(2);
+   
 
-    while (!glfwWindowShouldClose(window)) {
+    glUseProgram(program);
 
-        glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUniform2f(map_scaleLoc,mapscale[0],mapscale[1]);
+    cout <<"\n\n---" << glGetError();
+    while (!glfwWindowShouldClose(window))
+    {
 
         bool inp = process_input(window, camera);
         Time.update();
@@ -170,17 +227,22 @@ int main() {
             inp = false;
         }
 
+        glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0, -1.0);
+
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 2);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+
     glDeleteProgram(program);
 
-    glfwTerminate();    
-    return 0;
 
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
 }

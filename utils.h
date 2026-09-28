@@ -179,7 +179,8 @@ struct Tag {
     inline int tag_len() {
         return open.end - open.start + close.end - close.start - 2;
     }
-    inline int span() { return close.end - open.start + 2; }
+
+    inline int span() { this;return close.end - open.start + 2; }
 
     void commit_name() { strcpy(tag_name, buffer); }
 
@@ -355,6 +356,7 @@ struct TagWriter {
 
 
     int cntn_len_of_tag(Tag* tag) {
+
         int cntn_len = tag->span();
         for (int i = 0; i < tag->tags_inside; i++) {
             if (tag[i].type == TagType::Paste) {
@@ -392,6 +394,7 @@ struct TagWriter {
     }
 
     ~TagWriter() {
+        std::cout << dst;
         delete[] dst;
     }
 };

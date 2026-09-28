@@ -6,7 +6,12 @@ template <int N, typename T> struct ZeroSafeArray {
 	T& operator[](int i) {
 		return data[i];
 	}
+
+	constexpr int len() { return N; }
+	int bytesize() { return sizeof(data); }
+
 };
+
 template <typename T> struct ZeroSafeArray<0, T> {
 	ZeroSafeArray() {}
 };
@@ -27,8 +32,13 @@ template <int N, typename T, GLuint buffer_type>
 struct GlBuffer : ZeroSafeArray<N, T> {
 	GLuint id;
 	bool is_persistant = false;
+	bool is_flush = false;
+	bool is_mapped = true;
+	int map_start = -1;
+	int map_end = -1;
+	void* mapped_ptr;
 
-	void init_gl_buffer() {
+	void init_buffer() {
 		if constexpr (N > 0) {
 			glGenBuffers(1, &id);
 		}
@@ -44,41 +54,62 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 	void upload(GLuint draw_type) {
 		if constexpr (N > 0) {
 			bind();
+			
 			glBufferData(buffer_type, N * sizeof(T), this->data, draw_type);
 		}
 	}
 
-	void upload_persistant(GLuint draw_type) {
+	void upload_persistant(GLuint flags) {
 		if constexpr (N > 0) {
 			bind();
-			glBufferData(buffer_type, N * sizeof(T), this->data, draw_type);
+			glBufferStorage(buffer_type, N * sizeof(T), this->data, flags);
 		}
 		is_persistant = true;
 	}
 
-	void* map_full(GLuint more_flags) {
+	void* map(int start , int end,GLuint more_flags) {
 		bind();
-		GLuint flags = (is_persistant) ?
-			GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT : GL_MAP_WRITE_BIT;
-
-		return glMapBufferRange(
+		GLuint flags = (is_persistant) ? GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT : GL_MAP_WRITE_BIT;
+		std::cout <<"error " << glGetError();
+		mapped_ptr = glMapBufferRange(
 			buffer_type,
-			0,
-			sizeof(this->data),
+			start,
+			end,
 			flags | more_flags
 		);
+		return mapped_ptr;
+	}
+
+	void* map_full(GLuint more_flags = 0) {
+		return map(0,this->bytesize(),more_flags);
+	}
+
+	void unmap() {
+		bind();
+		glUnmapBuffer(buffer_type);
 	}
 
 	void flush(size_t start, size_t end) {
+		bind();
 		glFlushMappedBufferRange(buffer_type, start, end);
+	}
+
+	void flushfull() {
+		flush(0,this->bytesize());
+	}
+
+	~GlBuffer() {
+		glDeleteBuffers(1, &id);
 	}
 };
 
 
 
+template<int N, typename T>
+using VBO = GlBuffer<N, T, GL_ARRAY_BUFFER>;
 
 template<int N>
-using VBO = GlBuffer<N, float, GL_ARRAY_BUFFER>;
+using PlainVBO = VBO<N, float>;
 
 
 template <int N>
