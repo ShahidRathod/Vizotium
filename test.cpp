@@ -215,7 +215,7 @@ template <int b_sz, int n> struct ShaderReader {
         is_nxt_token_tag();
         cpy_tag_name_at(element_name);
 
-        currnt_tag.start = char_no;
+        currnt_tag.cntnt_start = char_no;
 
         char name_buff[n_sz] = {};
 
@@ -271,7 +271,7 @@ template <int b_sz, int n> struct ShaderReader {
                 cpy_tag_name_at(name);
                 if (is_cpy) {
                     Tag cpy_range;
-                    get_content_len(cpy_range.start, cpy_range.end, cpy_range.opn_tg_strt);
+                    get_content_len(cpy_range.cntnt_start, cpy_range.cntnt_end, cpy_range.opn_tg_strt);
                 }
             }
             tag_end = false;

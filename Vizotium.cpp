@@ -79,27 +79,27 @@ Vertex* mappos_ptr;
 glm::vec3 mapscale = { 0.1,0.1 ,0.1};
 bool win_resized = true;
 
-constexpr int grid_pow = 5;
+constexpr int grid_pow = 7;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
 
 // ----- random fields -----------
 static ComplexNoise<grid_pow> noise;
-static PlainVBO<grid_sz_sq * 2> rndm_field;
-
+static PlainVBO<grid_sz_sq * 2> rndm_field; // first half contains the rndm_field 
+                                            //second half contains the noise 
+float* rndm_field_mem;
 void make_new_field() {
     noise.init_noise();
+    noise.apply_spectral_bias();
     noise.fft.inverse_fft();
-    noise.output_grayscale(rndm_field.data);
 }
 
-void make_random_field() {
+void update_random_field() {
     make_new_field();
-    rndm_field.bind();
-    void* dst = rndm_field.map_full(GL_MAP_FLUSH_EXPLICIT_BIT);
-
-
+    make_new_field();
+    noise.output_grayscale(rndm_field_mem);
+    noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
 }
 
 
@@ -120,7 +120,6 @@ void map_func() {
 
 bool process_input(GLFWwindow* win, Camera& cam) {
     bool key_press = false;
-
     KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
         KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
         KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
@@ -134,16 +133,16 @@ bool process_input(GLFWwindow* win, Camera& cam) {
 
         KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
         KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
-        KEY_FUNC_ELSE_IF(ENTER, make_random_field())
+        KEY_FUNC_ELSE_IF(ENTER, update_random_field())
 
         return key_press;
 }
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
 
-
 int main()
 {
+
     mat_debug = false;
     memcpy(vbo.data,&strip_quad,sizeof(strip_quad));
     memcpy(mapPos.data, &mapPos_data, sizeof(mapPos_data));
@@ -177,10 +176,32 @@ int main()
 
 
     glBindVertexArray(vao);
- 
-   
+
+    // this only generated buffer ids 
+    rndm_field.init_buffer();
     vbo.init_buffer();
     mapPos.init_buffer();
+    
+
+    rndm_field.bind();
+    make_new_field();
+    noise.output_grayscale(rndm_field.data);
+    noise.grayscale_noise(rndm_field.data+grid_sz_sq);
+    rndm_field.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT|GL_MAP_COHERENT_BIT);
+    rndm_field_mem = (float*)rndm_field.map_full(GL_MAP_PERSISTENT_BIT|GL_MAP_COHERENT_BIT);
+
+    glVertexAttribPointer(
+        2,
+        1,
+        GL_FLOAT,
+        GL_TRUE,
+        sizeof(float),
+        nullptr
+    );
+
+    glVertexAttribDivisor(2,1);
+    glEnableVertexAttribArray(2);
+
 
 
 
@@ -192,6 +213,7 @@ int main()
     constexpr int map_instance_count =  2*grid_sz_sq;
 
     if (!mapPos.is_binded()) std::cout << "not binded";
+
     glVertexAttribPointer(
         1,
         3,
@@ -205,6 +227,7 @@ int main()
     glEnableVertexAttribArray(1);
 
     vbo.bind();
+    
     vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     gridmap = (float*)vbo.map_full();
 
