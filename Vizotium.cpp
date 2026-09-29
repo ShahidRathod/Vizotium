@@ -100,6 +100,7 @@ void update_random_field() {
     make_new_field();
     noise.output_grayscale(rndm_field_mem);
     noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
+    //rndm_field.flushfull();
 }
 
 
