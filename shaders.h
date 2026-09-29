@@ -5,17 +5,27 @@
 #version 440 core
 
 layout(location = 0) in vec3 pos;
-uniform in vec2 scale;
-layout(location = 2) in vec3 offset;
+layout(location = 1) in vec3 offset;
+uniform vec3 scale;
+uniform mat4 MVP;
+uniform int grid_sz;
+
 
 out vec3 clr;
 
 void main()
 {
-    clr = pos;
-    gl_Position = vec4(scale*pos, 1.0);
+    int i = gl_InstanceID;
+
+    float x = i %(grid_sz);
+    float y = i /(grid_sz);
+    vec3 mappoint = vec3(x,y,0);
+    
+    clr =   offset+vec3(0.5,1,1);
+    gl_Position = MVP*vec4(scale*(pos+mappoint) + offset, 1.0);
 
 }
+
 </vertex>
 
 <fragment>

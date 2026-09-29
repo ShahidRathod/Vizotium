@@ -47,28 +47,29 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 		return BindedBuffer<buffer_type>::id == this->id;
 	}
 	void bind() {
-		if (!is_binded()) glBindBuffer(buffer_type, this->id);
-		BindedBuffer<buffer_type>::change(id);
+		if (!is_binded()) {
+			glBindBuffer(buffer_type, this->id);
+			BindedBuffer<buffer_type>::change(id);
+		}
 	}
 
 	void upload(GLuint draw_type) {
+		if (!is_binded()) std::cout << "not binded";
 		if constexpr (N > 0) {
-			bind();
-			
 			glBufferData(buffer_type, N * sizeof(T), this->data, draw_type);
 		}
 	}
 
 	void upload_persistant(GLuint flags) {
+		if (!is_binded()) std::cout << "not binded";
 		if constexpr (N > 0) {
-			bind();
 			glBufferStorage(buffer_type, N * sizeof(T), this->data, flags);
 		}
 		is_persistant = true;
 	}
 
 	void* map(int start , int end,GLuint more_flags) {
-		bind();
+		if (!is_binded()) std::cout << "not binded";
 		GLuint flags = (is_persistant) ? GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT : GL_MAP_WRITE_BIT;
 		std::cout <<"error " << glGetError();
 		mapped_ptr = glMapBufferRange(
@@ -85,12 +86,10 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 	}
 
 	void unmap() {
-		bind();
 		glUnmapBuffer(buffer_type);
 	}
 
 	void flush(size_t start, size_t end) {
-		bind();
 		glFlushMappedBufferRange(buffer_type, start, end);
 	}
 
@@ -114,4 +113,6 @@ using PlainVBO = VBO<N, float>;
 
 template <int N>
 using EBO = GlBuffer<N, GLuint, GL_ELEMENT_ARRAY_BUFFER>;
+
+
 

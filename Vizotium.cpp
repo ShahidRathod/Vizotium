@@ -58,9 +58,9 @@ struct StripQuad {
 
 VBO<1, StripQuad> vbo;
 StripQuad strip_quad = {
-    {  0.0f,  0.0f, 0.0f },
-    {  0.0f,  1.0f, 0.0f },
-    {  1.f,   1.f, 0.0f },
+    {  1.0f,  0.0f, 0.0f },
+    {  1.0f,  1.0f, 0.0f },
+    {  0.0f,   0.f, 0.0f },
     {  0.f,   1.f, 0.0f },
 
 };
@@ -68,14 +68,19 @@ StripQuad strip_quad = {
 
 float* gridmap;
 
-VBO<2, Vertex> mapPos;
-Vertex mapPos_data[] = { {-0.5,-0.5,0}, {0.5,-0.5,0} };
+VBO<2 ,Vertex> mapPos;
+Vertex mapPos_data[] = { 
+    {  -0.3,  -0.4 , 0.f },
+    {  0.3,  -0.4, 0.0f },
+};
+
 Vertex* mappos_ptr;
 
-float mapscale[2] = { 0.1,0.1 };
+glm::vec3 mapscale = { 0.1,0.1 ,0.1};
+bool win_resized = true;
 
-constexpr int grid_pow = 8;
-constexpr int grid_sz = 1 << 8;
+constexpr int grid_pow = 5;
+constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
 
@@ -161,7 +166,8 @@ int main()
     // UNIFORMS
     GLuint mvpLoc = glGetUniformLocation(program, "MVP");
     GLuint map_scaleLoc = glGetUniformLocation(program, "scale");
-   
+    GLuint grid_szLoc = glGetUniformLocation(program, "grid_sz");
+
     GLuint vaos[3];
     GLuint& vao = vaos[0];
     GLuint& mapscalevao = vaos[1];
@@ -172,13 +178,37 @@ int main()
 
     glBindVertexArray(vao);
  
+   
     vbo.init_buffer();
     mapPos.init_buffer();
+
+
+
+    mapPos.bind();
+    mapPos.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    mappos_ptr = (Vertex*)mapPos.map_full();
+
+    constexpr int offsetInstanceDivisor = grid_sz_sq;
+    constexpr int map_instance_count =  2*grid_sz_sq;
+
+    if (!mapPos.is_binded()) std::cout << "not binded";
+    glVertexAttribPointer(
+        1,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(Vertex),
+        nullptr
+    );
+
+    glVertexAttribDivisor(1, offsetInstanceDivisor);
+    glEnableVertexAttribArray(1);
 
     vbo.bind();
     vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     gridmap = (float*)vbo.map_full();
 
+    if (!vbo.is_binded()) std::cout << "not binded";
     glVertexAttribPointer(
         0,
         3,
@@ -187,33 +217,16 @@ int main()
         sizeof(Vertex),
         nullptr
     );
-
-    glVertexAttribDivisor(0, 0);
     glEnableVertexAttribArray(0);
- 
-
-    mapPos.bind();
-    mapPos.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-    mappos_ptr = (Vertex*)vbo.map_full();
-
-
-    glVertexAttribPointer(
-        2,
-        3,
-        GL_FLOAT,
-        GL_FALSE,
-        sizeof(Vertex),
-        nullptr 
-    );
-    
-    glVertexAttribDivisor(2, 1);
-    glEnableVertexAttribArray(2);
-   
-
     glUseProgram(program);
 
-    glUniform2f(map_scaleLoc,mapscale[0],mapscale[1]);
+    
+   
+    glUniform1i(grid_szLoc, grid_sz);
+
+    
     cout <<"\n\n---" << glGetError();
+    framebuffer_size_callback(window,winwidth,winheight);
     while (!glfwWindowShouldClose(window))
     {
 
@@ -227,12 +240,22 @@ int main()
             inp = false;
         }
 
+        if (win_resized) {
+            glUniform3fv(map_scaleLoc,1,&mapscale[0]);
+            win_resized = false;
+        }
+
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+         
+        glDrawArraysInstanced(
+            GL_TRIANGLE_STRIP, 
+            0, 
+            4,
+            map_instance_count);
 
-        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 2);
-
+        //glDrawArrays(GL_TRIANGLE_STRIP,0,4);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
