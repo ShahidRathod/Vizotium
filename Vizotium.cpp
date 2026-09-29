@@ -100,7 +100,7 @@ void update_random_field() {
     make_new_field();
     noise.output_grayscale(rndm_field_mem);
     noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
-    //rndm_field.flushfull();
+    rndm_field.flushfull();
 }
 
 
@@ -188,8 +188,8 @@ int main()
     make_new_field();
     noise.output_grayscale(rndm_field.data);
     noise.grayscale_noise(rndm_field.data+grid_sz_sq);
-    rndm_field.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT|GL_MAP_COHERENT_BIT);
-    rndm_field_mem = (float*)rndm_field.map_full(GL_MAP_PERSISTENT_BIT|GL_MAP_COHERENT_BIT);
+    rndm_field.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    rndm_field_mem = (float*)rndm_field.map_full(GL_MAP_PERSISTENT_BIT);
 
     glVertexAttribPointer(
         2,
