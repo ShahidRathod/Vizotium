@@ -111,8 +111,47 @@ template<int N>
 using PlainVBO = VBO<N, float>;
 
 
+
+
+template <typename T>
+struct Ebo_tringl {
+	T v1, v2, v3;
+};
+
+template <typename T>
+struct Ebo_sqreT {
+	Ebo_tringl<T> t1, t2;
+};
+
+using Ebo_sqre = Ebo_sqreT<int8_t>;
 template <int N>
-using EBO = GlBuffer<N, GLuint, GL_ELEMENT_ARRAY_BUFFER>;
+using EBO = GlBuffer<N, Ebo_sqre, GL_ELEMENT_ARRAY_BUFFER>;
 
+template <int N>
+struct SurfaceEBOBuffer : EBO<N>{
+	static constexpr int ebo_stride = N - 1;
+	void init_buffer() {
+		EBO<N>::init_buffer();
+		for (int i = 0; i < N - 1; i++) {
+			for (int j = 0; j < ebo_stride; j++) {
+				int indx = j + i * ebo_stride;
 
+				Ebo_sqre& sqre = this->data[indx];
 
+				// ebo array is GLTringle coordinate mappings and arr has stride x_sz
+				int8_t ebo_indx = j + i * N;
+
+				sqre = Ebo_sqre{
+					{ebo_indx, ebo_indx + 1, ebo_indx + N},
+					{ebo_indx + 1, ebo_indx + N, ebo_indx + N + 1}
+				};
+
+			}
+		}
+	}
+
+	constexpr int draw_count() {
+		return sizeof(this->data)/ sizeof(int8_t);
+	}
+
+};

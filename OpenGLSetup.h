@@ -80,7 +80,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 
     mapscale = { height,width,1};
     mapscale = glm::normalize(mapscale);
-    mapscale /= grid_sz;
+    mapscale /= (grid_sz);
     win_resized = true;
 }
 

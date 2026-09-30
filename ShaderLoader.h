@@ -337,8 +337,7 @@ struct ShaderReader {
         return f;
     }
 
-    ShaderReader(const char* file_name, GLint prog) {
-        program = prog;
+    ShaderReader(const char* file_name) {
         file = open_file(file_name);
         fseek(file, 0, SEEK_END);
         file_sz = ftell(file) - 1;
@@ -354,7 +353,7 @@ struct ShaderReader {
         content_loop();
     }
     
-    void compile_shader_for(const char* enitity, GLenum type) {
+    void compile_shader_for(const char* enitity, GLenum type, GLuint program) {
         
         int index = GLshader_to_index(type);
      

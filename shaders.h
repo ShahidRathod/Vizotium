@@ -12,8 +12,27 @@ uniform vec3 scale;
 uniform mat4 MVP;
 uniform int grid_sz;
 
-
 out vec3 clr;
+
+vec3 color(float h)
+{
+    h = clamp(h, 0.0, 1.0);
+
+    if (h < 0.25)
+        return mix(vec3(0.267, 0.005, 0.329),
+            vec3(0.230, 0.322, 0.546), h / 0.25);
+
+    if (h < 0.50)
+        return mix(vec3(0.230, 0.322, 0.546),
+            vec3(0.128, 0.567, 0.551), (h - 0.25) / 0.25);
+
+    if (h < 0.75)
+        return mix(vec3(0.128, 0.567, 0.551),
+            vec3(0.369, 0.789, 0.383), (h - 0.50) / 0.25);
+
+    return mix(vec3(0.369, 0.789, 0.383),
+        vec3(0.993, 0.906, 0.144), (h - 0.75) / 0.25);
+}
 
 void main()
 {
@@ -24,7 +43,7 @@ void main()
 
     vec3 mappoint = vec3(x,y,0);
     
-    clr =   vec3(height);
+    clr =   color(height);
     gl_Position = vec4(scale*(pos+mappoint) + offset, 1.0);
 
 }
@@ -39,6 +58,7 @@ out vec4 FragColor;
 
 void main()
 {
+
     FragColor = vec4(clr, 1.0);
 }
 </fragment>

@@ -65,16 +65,17 @@ StripQuad strip_quad = {
 
 };
 
-
 float* gridmap;
 
-VBO<2 ,Vertex> mapPos;
-Vertex mapPos_data[] = { 
-    {  -0.3,  -0.4 , 0.f },
-    {  0.3,  -0.4, 0.0f },
+VBO<3 ,Vertex> offset;
+
+Vertex offset_data[] = {
+    { -.95, -.9, 0.0f },
+    {  -.95, .05, 0.0f },
+    {0,0,0}
 };
 
-Vertex* mappos_ptr;
+Vertex* offset_ptr;
 
 glm::vec3 mapscale = { 0.1,0.1 ,0.1};
 bool win_resized = true;
@@ -83,7 +84,7 @@ constexpr int grid_pow = 7;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
-
+SurfaceEBOBuffer<grid_sz> sur_ebo;
 // ----- random fields -----------
 static ComplexNoise<grid_pow> noise;
 static PlainVBO<grid_sz_sq * 2> rndm_field; // first half contains the rndm_field 
@@ -146,16 +147,20 @@ int main()
 
     mat_debug = false;
     memcpy(vbo.data,&strip_quad,sizeof(strip_quad));
-    memcpy(mapPos.data, &mapPos_data, sizeof(mapPos_data));
+    memcpy(offset.data, &offset_data, sizeof(offset_data));
 
     GLFWwindow* window = make_window();
 
     GLuint program = glCreateProgram();
-    ShaderReader<4000, 64> reader("shaders.h", program);
+    GLuint surface_program = glCreateProgram();
+    ShaderReader<4000, 64> reader("shaders.h");
 
 
-    reader.compile_shader_for("heightmap", GL_VERTEX_SHADER);
-    reader.compile_shader_for("heightmap", GL_FRAGMENT_SHADER);
+    reader.compile_shader_for("heightmap", GL_VERTEX_SHADER, program);
+    reader.compile_shader_for("heightmap", GL_FRAGMENT_SHADER, program);
+
+    reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
+    reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
 
     linkprogram(program);
 
@@ -181,8 +186,8 @@ int main()
     // this only generated buffer ids 
     rndm_field.init_buffer();
     vbo.init_buffer();
-    mapPos.init_buffer();
-    
+    offset.init_buffer();
+    sur_ebo.init_buffer();
 
     rndm_field.bind();
     make_new_field();
@@ -206,14 +211,14 @@ int main()
 
 
 
-    mapPos.bind();
-    mapPos.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-    mappos_ptr = (Vertex*)mapPos.map_full();
+    offset.bind();
+    offset.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+    offset_ptr = (Vertex*)offset.map_full();
 
     constexpr int offsetInstanceDivisor = grid_sz_sq;
     constexpr int map_instance_count =  2*grid_sz_sq;
 
-    if (!mapPos.is_binded()) std::cout << "not binded";
+    if (!offset.is_binded()) std::cout << "not binded";
 
     glVertexAttribPointer(
         1,
@@ -232,7 +237,9 @@ int main()
     vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     gridmap = (float*)vbo.map_full();
 
-    if (!vbo.is_binded()) std::cout << "not binded";
+    sur_ebo.bind();
+    sur_ebo.upload(GL_STATIC_DRAW);
+
     glVertexAttribPointer(
         0,
         3,
@@ -242,17 +249,23 @@ int main()
         nullptr
     );
     glEnableVertexAttribArray(0);
-    glUseProgram(program);
+
 
     
-   
-    glUniform1i(grid_szLoc, grid_sz);
 
-    
     cout <<"\n\n---" << glGetError();
     framebuffer_size_callback(window,winwidth,winheight);
     while (!glfwWindowShouldClose(window))
     {
+
+        glDrawElements(
+            GL_TRIANGLE_STRIP,
+            sur_ebo.draw_count(),
+            GL_UNSIGNED_SHORT,
+            sur_ebo.data);
+
+        glUseProgram(program);
+        glUniform1i(grid_szLoc, grid_sz);
 
         bool inp = process_input(window, camera);
         Time.update();
@@ -279,7 +292,7 @@ int main()
             4,
             map_instance_count);
 
-        //glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
