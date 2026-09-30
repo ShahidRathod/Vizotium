@@ -219,6 +219,7 @@ template <int sz, int max_copy_depth>
 struct TagTree {
     Tag safety_padding;
     Tag arr[sz];
+    Tag safety_padding2;
     Tag root_obj;
     Tag* root = arr;
     Tag* curnt = root;
@@ -307,7 +308,8 @@ struct TagTree {
                     hash = hash->next;
                     if (hash == nullptr) return inside_ptr;
 
-                    nxt_level_sz = 1;
+                    index = level_sz + nxt_level_sz-1;
+                    //nxt_level_sz = 1;
                     break;
                 }
             }
@@ -358,7 +360,8 @@ struct TagWriter {
     int cntn_len_of_tag(Tag* tag) {
 
         int cntn_len = tag->span();
-        for (int i = 0; i < tag->tags_inside; i++) {
+
+        for (int i = 0; i < tag->tags_inside+1; i++) {
             if (tag[i].type == TagType::Paste) {
                 cntn_len += cntn_len_of_tag(tag[i].inside);
             }
@@ -388,8 +391,13 @@ struct TagWriter {
     TagWriter(char* fl, Tag* rt) {
         src = fl;
         root = rt;
-        pen = dst = new char[cntn_len_of_tag(root)];
+        int len = cntn_len_of_tag(root);
+        pen = dst = new char[len];
         tag_tree_write(root);
+        int written = pen - dst;
+        if (written > len) {
+            printf("overwrite");
+        }
         *pen = '\0';
     }
 

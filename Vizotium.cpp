@@ -67,7 +67,7 @@ StripQuad strip_quad = {
 
 float* gridmap;
 
-VBO<3 ,Vertex> offset;
+VBO<3, Vertex> offset;
 
 Vertex offset_data[] = {
     { -.95, -.9, 0.0f },
@@ -77,18 +77,18 @@ Vertex offset_data[] = {
 
 Vertex* offset_ptr;
 
-glm::vec3 mapscale = { 0.1,0.1 ,0.1};
+glm::vec3 mapscale = { 0.1,0.1 ,0.1 };
 bool win_resized = true;
 
-constexpr int grid_pow = 7;
+constexpr int grid_pow = 3;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
-SurfaceEBOBuffer<grid_sz> sur_ebo;
+SurfaceEBO<grid_sz> sur_ebo;
 // ----- random fields -----------
 static ComplexNoise<grid_pow> noise;
 static PlainVBO<grid_sz_sq * 2> rndm_field; // first half contains the rndm_field 
-                                            //second half contains the noise 
+//second half contains the noise 
 float* rndm_field_mem;
 void make_new_field() {
     noise.init_noise();
@@ -146,7 +146,7 @@ int main()
 {
 
     mat_debug = false;
-    memcpy(vbo.data,&strip_quad,sizeof(strip_quad));
+    memcpy(vbo.data, &strip_quad, sizeof(strip_quad));
     memcpy(offset.data, &offset_data, sizeof(offset_data));
 
     GLFWwindow* window = make_window();
@@ -173,29 +173,44 @@ int main()
     GLuint map_scaleLoc = glGetUniformLocation(program, "scale");
     GLuint grid_szLoc = glGetUniformLocation(program, "grid_sz");
 
-    GLuint vaos[3];
+
+
+    linkprogram(surface_program);
+    GLuint mvpLoc2 = glGetUniformLocation(program, "MVP2");
+    GLuint grid_szLoc2 = glGetUniformLocation(program, "grid_sz");
+
+
+    GLuint vaos[4];
     GLuint& vao = vaos[0];
     GLuint& mapscalevao = vaos[1];
     GLuint& mapoffsetvao = vaos[2];
+    GLuint& sur_vao = vaos[3];
 
-    glGenVertexArrays(3,vaos);
+    glGenVertexArrays(4, vaos);
 
 
     glBindVertexArray(vao);
 
-    // this only generated buffer ids 
+    //this only generated buffer ids 
     rndm_field.init_buffer();
     vbo.init_buffer();
     offset.init_buffer();
+    
     sur_ebo.init_buffer();
 
+    sur_ebo.init_buffer();
+
+    sur_ebo.bind();
+
+    
     rndm_field.bind();
     make_new_field();
     noise.output_grayscale(rndm_field.data);
-    noise.grayscale_noise(rndm_field.data+grid_sz_sq);
+    noise.grayscale_noise(rndm_field.data + grid_sz_sq);
     rndm_field.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     rndm_field_mem = (float*)rndm_field.map_full(GL_MAP_PERSISTENT_BIT);
 
+    
     glVertexAttribPointer(
         2,
         1,
@@ -205,7 +220,7 @@ int main()
         nullptr
     );
 
-    glVertexAttribDivisor(2,1);
+    glVertexAttribDivisor(2, 1);
     glEnableVertexAttribArray(2);
 
 
@@ -216,7 +231,7 @@ int main()
     offset_ptr = (Vertex*)offset.map_full();
 
     constexpr int offsetInstanceDivisor = grid_sz_sq;
-    constexpr int map_instance_count =  2*grid_sz_sq;
+    constexpr int map_instance_count = 2 * grid_sz_sq;
 
     if (!offset.is_binded()) std::cout << "not binded";
 
@@ -233,12 +248,11 @@ int main()
     glEnableVertexAttribArray(1);
 
     vbo.bind();
-    
+
     vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
     gridmap = (float*)vbo.map_full();
 
-    sur_ebo.bind();
-    sur_ebo.upload(GL_STATIC_DRAW);
+    
 
     glVertexAttribPointer(
         0,
@@ -249,20 +263,19 @@ int main()
         nullptr
     );
     glEnableVertexAttribArray(0);
-
-
     
 
-    cout <<"\n\n---" << glGetError();
-    framebuffer_size_callback(window,winwidth,winheight);
+    sur_ebo.bind();
+    sur_ebo.upload(GL_STATIC_DRAW);
+
+    sur_ebo.print();
+    cout << "\n\n---" << glGetError();
+    framebuffer_size_callback(window, winwidth, winheight);
+
+
+
     while (!glfwWindowShouldClose(window))
     {
-
-        glDrawElements(
-            GL_TRIANGLE_STRIP,
-            sur_ebo.draw_count(),
-            GL_UNSIGNED_SHORT,
-            sur_ebo.data);
 
         glUseProgram(program);
         glUniform1i(grid_szLoc, grid_sz);
@@ -278,28 +291,35 @@ int main()
         }
 
         if (win_resized) {
-            glUniform3fv(map_scaleLoc,1,&mapscale[0]);
+            glUniform3fv(map_scaleLoc, 1, &mapscale[0]);
             win_resized = false;
         }
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-         
+        
         glDrawArraysInstanced(
-            GL_TRIANGLE_STRIP, 
-            0, 
+            GL_TRIANGLE_STRIP,
+            0,
             4,
             map_instance_count);
+     
 
 
+        glUseProgram(surface_program);
+        glUniform1i(grid_szLoc2, grid_sz);
+        glDrawElements(
+            GL_TRIANGLE_STRIP,
+            sur_ebo.draw_count(),
+            GL_UNSIGNED_INT,
+            nullptr);
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-
     glDeleteProgram(program);
-
 
     glfwDestroyWindow(window);
     glfwTerminate();

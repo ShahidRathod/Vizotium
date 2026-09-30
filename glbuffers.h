@@ -43,6 +43,7 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 			glGenBuffers(1, &id);
 		}
 	}
+
 	bool is_binded() {
 		return BindedBuffer<buffer_type>::id == this->id;
 	}
@@ -56,14 +57,14 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 	void upload(GLuint draw_type) {
 		if (!is_binded()) std::cout << "not binded";
 		if constexpr (N > 0) {
-			glBufferData(buffer_type, N * sizeof(T), this->data, draw_type);
+			glBufferData(buffer_type, this->bytesize(), this->data, draw_type);
 		}
 	}
 
 	void upload_persistant(GLuint flags) {
 		if (!is_binded()) std::cout << "not binded";
 		if constexpr (N > 0) {
-			glBufferStorage(buffer_type, N * sizeof(T), this->data, flags);
+			glBufferStorage(buffer_type, this->bytesize(), this->data, flags);
 		}
 		is_persistant = true;
 	}
@@ -113,45 +114,51 @@ using PlainVBO = VBO<N, float>;
 
 
 
-template <typename T>
-struct Ebo_tringl {
-	T v1, v2, v3;
+template <typename T,int N>
+struct LineEboGlStrip {
+	T arr[2 * (N)];
+	T end;
+
+	void make_degenerates() { end = arr[2 * N - 1]; }
+	void print() {
+		//std::cout<<(int)start[0]<<" "<<(int)start[1]<<" ";
+		for (int i = 0; i < 2 * N; i++) std::cout << (int)arr[i] << " ";
+		std::cout << (int)end;
+	}
 };
 
-template <typename T>
-struct Ebo_sqreT {
-	Ebo_tringl<T> t1, t2;
-};
 
-using Ebo_sqre = Ebo_sqreT<int8_t>;
-template <int N>
-using EBO = GlBuffer<N, Ebo_sqre, GL_ELEMENT_ARRAY_BUFFER>;
+using EboInt = unsigned int;
 
 template <int N>
-struct SurfaceEBOBuffer : EBO<N>{
-	static constexpr int ebo_stride = N - 1;
+using SurfaceEBOBuffer = GlBuffer<N-1, LineEboGlStrip<EboInt,N>, GL_ELEMENT_ARRAY_BUFFER>;
+
+template <int N>
+struct SurfaceEBO : SurfaceEBOBuffer<N> {
+	
 	void init_buffer() {
-		EBO<N>::init_buffer();
+		SurfaceEBOBuffer<N>::init_buffer();
 		for (int i = 0; i < N - 1; i++) {
-			for (int j = 0; j < ebo_stride; j++) {
-				int indx = j + i * ebo_stride;
-
-				Ebo_sqre& sqre = this->data[indx];
-
-				// ebo array is GLTringle coordinate mappings and arr has stride x_sz
-				int8_t ebo_indx = j + i * N;
-
-				sqre = Ebo_sqre{
-					{ebo_indx, ebo_indx + 1, ebo_indx + N},
-					{ebo_indx + 1, ebo_indx + N, ebo_indx + N + 1}
-				};
-
+			LineEboGlStrip<EboInt, N>& line = this->data[i];
+			for (int8_t j = 0; j < N; j++) {
+				line.arr[2 * j] = i * N + j;
+				line.arr[2 * j + 1] = j + (i + 1) * (N);
 			}
+
+			line.make_degenerates();
+		}
+	}
+
+	void print() {
+		std::cout << "\n";
+		for (int i = 0; i < N - 1; i++) {
+			this->data[i].print();
+			std::cout << "\n";
 		}
 	}
 
 	constexpr int draw_count() {
-		return sizeof(this->data)/ sizeof(int8_t);
+		return this->bytesize()/ sizeof(EboInt);
 	}
 
 };

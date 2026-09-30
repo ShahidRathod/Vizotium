@@ -37,18 +37,18 @@ vec3 color(float h)
 void main()
 {
     int i = gl_InstanceID;
-    i = i % (grid_sz*grid_sz);
-    float x = i %grid_sz;
-    float y = i/(grid_sz);
+    i = i % (grid_sz * grid_sz);
+    float x = i % grid_sz;
+    float y = i / (grid_sz);
 
-    vec3 mappoint = vec3(x,y,0);
-    
-    clr =   color(height);
-    gl_Position = vec4(scale*(pos+mappoint) + offset, 1.0);
+    vec3 mappoint = vec3(x, y, 0);
+
+    clr = color(height);
+    gl_Position = vec4(scale * (pos + mappoint) + offset, 1.0);
 
 }
 
-</vertex>
+< / vertex>
 
 <fragment>
 
@@ -61,10 +61,37 @@ void main()
 
     FragColor = vec4(clr, 1.0);
 }
-</fragment>
+< / fragment>
 
-</heightmap>
+< / heightmap>
 
 
 <surface>
-</surface>
+
+<vertex>
+
+#version 440 core
+uniform int grid_sz;
+out vec3 clr;
+
+void main () {
+
+    clr = vec3(1,1,1);
+    int i = gl_VertexID;
+    i = i % (grid_sz * grid_sz);
+    float x = i % grid_sz;
+    float y = i / (grid_sz);
+
+    gl_Position = vec4(x/2, y/2, 0,grid_sz)/(grid_sz);
+
+}
+
+</vertex>
+
+<fragment>
+
+<$heightmap:fragment>
+
+</fragment>
+
+< / surface>
