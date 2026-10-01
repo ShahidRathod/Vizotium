@@ -116,10 +116,13 @@ using PlainVBO = VBO<N, float>;
 
 template <typename T,int N>
 struct LineEboGlStrip {
+	T start;
 	T arr[2 * (N)];
 	T end;
-
-	void make_degenerates() { end = arr[2 * N - 1]; }
+	void make_degenerates() { 
+		end = arr[2 * N - 1]; 
+		start = arr[0];
+	}
 	void print() {
 		//std::cout<<(int)start[0]<<" "<<(int)start[1]<<" ";
 		for (int i = 0; i < 2 * N; i++) std::cout << (int)arr[i] << " ";
@@ -128,7 +131,7 @@ struct LineEboGlStrip {
 };
 
 
-using EboInt = unsigned int;
+using EboInt = unsigned short int;
 
 template <int N>
 using SurfaceEBOBuffer = GlBuffer<N-1, LineEboGlStrip<EboInt,N>, GL_ELEMENT_ARRAY_BUFFER>;
@@ -138,9 +141,9 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 	
 	void init_buffer() {
 		SurfaceEBOBuffer<N>::init_buffer();
-		for (int i = 0; i < N - 1; i++) {
+		for (EboInt i = 0; i < N - 1; i++) {
 			LineEboGlStrip<EboInt, N>& line = this->data[i];
-			for (int8_t j = 0; j < N; j++) {
+			for (EboInt j = 0; j < N; j++) {
 				line.arr[2 * j] = i * N + j;
 				line.arr[2 * j + 1] = j + (i + 1) * (N);
 			}
@@ -158,7 +161,7 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 	}
 
 	constexpr int draw_count() {
-		return this->bytesize()/ sizeof(EboInt);
+		return this->bytesize()/ (sizeof(EboInt));
 	}
 
 };

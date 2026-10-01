@@ -82,7 +82,6 @@ public:
     float inc;
 
     Ebo_sqre ebo_arr[ebo_sqre_sz];
-    Vertex arr[size];
 
     Surface(const float c_x, const float c_y, const float x, const float y) {
         float x_st = c_x - x;

@@ -175,3 +175,11 @@ How new Range objects was added earlier : current every object added finded the 
 
 
 
+[1/10/26]
+
+There is a lot of the scaffolding in the rotation axis the coords.yz = cooods.zy the rotation axis must be changed in camera . 
+
+next : 
+
+persistently mapped MVP for bitmaps and surface too 
+

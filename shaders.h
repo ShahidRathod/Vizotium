@@ -13,35 +13,34 @@ uniform mat4 MVP;
 uniform int grid_sz;
 
 out vec3 clr;
-
+<viridis>
 vec3 color(float h)
 {
     h = clamp(h, 0.0, 1.0);
+    const vec3 c0 = vec3(0.2446, 0.0284, 0.3552);
+    const vec3 c1 = vec3(1.3097, 1.2498, 1.0515);
+    const vec3 c2 = vec3(-8.5613, -0.5851, -1.0321);
+    const vec3 c3 = vec3(13.5837, 0.7695, -0.8296);
+    const vec3 c4 = vec3(-5.5793, -0.5587, 0.5341);
 
-    if (h < 0.25)
-        return mix(vec3(0.267, 0.005, 0.329),
-            vec3(0.230, 0.322, 0.546), h / 0.25);
-
-    if (h < 0.50)
-        return mix(vec3(0.230, 0.322, 0.546),
-            vec3(0.128, 0.567, 0.551), (h - 0.25) / 0.25);
-
-    if (h < 0.75)
-        return mix(vec3(0.128, 0.567, 0.551),
-            vec3(0.369, 0.789, 0.383), (h - 0.50) / 0.25);
-
-    return mix(vec3(0.369, 0.789, 0.383),
-        vec3(0.993, 0.906, 0.144), (h - 0.75) / 0.25);
+    return clamp(c0 + h * (c1 + h * (c2 + h * (c3 + h * c4))), 0.0, 1.0);
 }
+< / viridis>
 
-void main()
-{
-    int i = gl_InstanceID;
+const vec3 xyoffset = vec3(0,0,0);
+
+<xyzcoords>
+vec3 xyzcoords(int i,float h) {
     i = i % (grid_sz * grid_sz);
     float x = i % grid_sz;
     float y = i / (grid_sz);
+    return vec3(x, y, h) + xyoffset;
+}
+</xyzcoords>
 
-    vec3 mappoint = vec3(x, y, 0);
+void main()
+{
+    vec3 mappoint = xyzcoords(gl_InstanceID,0);
 
     clr = color(height);
     gl_Position = vec4(scale * (pos + mappoint) + offset, 1.0);
@@ -71,18 +70,21 @@ void main()
 <vertex>
 
 #version 440 core
+layout(location = 2) in float height;
 uniform int grid_sz;
+uniform mat4 MVP;
 out vec3 clr;
 
+<$viridis>
+const vec3 xyoffset = vec3(-grid_sz/2, -grid_sz/2, 0);
+<$xyzcoords>
 void main () {
 
-    clr = vec3(1,1,1);
-    int i = gl_VertexID;
-    i = i % (grid_sz * grid_sz);
-    float x = i % grid_sz;
-    float y = i / (grid_sz);
-
-    gl_Position = vec4(x/2, y/2, 0,grid_sz)/(grid_sz);
+    float h = 8*height;
+    clr = color(height);
+    vec3 coords = xyzcoords(gl_VertexID,h);
+    coords.yz = coords.zy;
+    gl_Position = MVP*vec4(coords, grid_sz) / (grid_sz);
 
 }
 

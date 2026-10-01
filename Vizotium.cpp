@@ -80,7 +80,7 @@ Vertex* offset_ptr;
 glm::vec3 mapscale = { 0.1,0.1 ,0.1 };
 bool win_resized = true;
 
-constexpr int grid_pow = 3;
+constexpr int grid_pow = 7;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
@@ -89,6 +89,7 @@ SurfaceEBO<grid_sz> sur_ebo;
 static ComplexNoise<grid_pow> noise;
 static PlainVBO<grid_sz_sq * 2> rndm_field; // first half contains the rndm_field 
 //second half contains the noise 
+
 float* rndm_field_mem;
 void make_new_field() {
     noise.init_noise();
@@ -96,11 +97,28 @@ void make_new_field() {
     noise.fft.inverse_fft();
 }
 
+GLsync draw_done;
+
 void update_random_field() {
     make_new_field();
     make_new_field();
     noise.output_grayscale(rndm_field_mem);
     noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
+    GLenum type = glClientWaitSync(draw_done,0,(int)1e4);
+    
+    switch (type)
+    {
+    case GL_ALREADY_SIGNALED:
+        std::cout << "already signaled";
+    case GL_CONDITION_SATISFIED:
+        std::cout << "condition satisfied";
+    case GL_TIMEOUT_EXPIRED:
+        std::cout << "time out ";
+    case GL_WAIT_FAILED:
+        std::cout << "error in sync";
+    default:
+        break;
+    }
     rndm_field.flushfull();
 }
 
@@ -174,10 +192,10 @@ int main()
     GLuint grid_szLoc = glGetUniformLocation(program, "grid_sz");
 
 
-
+    
     linkprogram(surface_program);
-    GLuint mvpLoc2 = glGetUniformLocation(program, "MVP2");
-    GLuint grid_szLoc2 = glGetUniformLocation(program, "grid_sz");
+    GLuint mvpLoc2 = glGetUniformLocation(surface_program, "MVP");
+    GLuint grid_szLoc2 = glGetUniformLocation(surface_program, "grid_sz");
 
 
     GLuint vaos[4];
@@ -192,25 +210,26 @@ int main()
     glBindVertexArray(vao);
 
     //this only generated buffer ids 
+
     rndm_field.init_buffer();
     vbo.init_buffer();
     offset.init_buffer();
-    
     sur_ebo.init_buffer();
-
-    sur_ebo.init_buffer();
-
-    sur_ebo.bind();
 
     
     rndm_field.bind();
     make_new_field();
     noise.output_grayscale(rndm_field.data);
     noise.grayscale_noise(rndm_field.data + grid_sz_sq);
-    rndm_field.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-    rndm_field_mem = (float*)rndm_field.map_full(GL_MAP_PERSISTENT_BIT);
 
-    
+    GLuint surface_flags =
+        GL_MAP_WRITE_BIT |
+        GL_MAP_PERSISTENT_BIT|
+        GL_MAP_COHERENT_BIT;
+
+    rndm_field.upload_persistant(surface_flags);
+    rndm_field_mem = (float*)rndm_field.map_full(surface_flags);
+
     glVertexAttribPointer(
         2,
         1,
@@ -220,10 +239,12 @@ int main()
         nullptr
     );
 
-    glVertexAttribDivisor(2, 1);
+
+    sur_ebo.bind();
+    sur_ebo.upload(GL_STATIC_DRAW);
+
+
     glEnableVertexAttribArray(2);
-
-
 
 
     offset.bind();
@@ -246,14 +267,14 @@ int main()
 
     glVertexAttribDivisor(1, offsetInstanceDivisor);
     glEnableVertexAttribArray(1);
-
+   
     vbo.bind();
 
     vbo.upload_persistant(GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+
     gridmap = (float*)vbo.map_full();
 
-    
-
+    glVertexAttribDivisor(2, 0);
     glVertexAttribPointer(
         0,
         3,
@@ -265,40 +286,38 @@ int main()
     glEnableVertexAttribArray(0);
     
 
-    sur_ebo.bind();
-    sur_ebo.upload(GL_STATIC_DRAW);
+   
 
-    sur_ebo.print();
+    //sur_ebo.print();
     cout << "\n\n---" << glGetError();
     framebuffer_size_callback(window, winwidth, winheight);
 
-
-
     while (!glfwWindowShouldClose(window))
     {
+        
+        bool inp = process_input(window, camera);
+        Time.update();
 
         glUseProgram(program);
         glUniform1i(grid_szLoc, grid_sz);
 
-        bool inp = process_input(window, camera);
-        Time.update();
         if (inp) {
             if (mat_debug) CLEAR_SCREEN;
             update_MVP_n_send(mvpLoc);
-
-            //cout << "[Yaw:] " << camera.yaw << " [Pitch:] " << camera.pitch;
-            inp = false;
         }
+
 
         if (win_resized) {
             glUniform3fv(map_scaleLoc, 1, &mapscale[0]);
             win_resized = false;
         }
 
+      
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         
+       
+        glVertexAttribDivisor(2, 1);
         glDrawArraysInstanced(
             GL_TRIANGLE_STRIP,
             0,
@@ -308,15 +327,27 @@ int main()
 
 
         glUseProgram(surface_program);
+
+        if (inp) {
+            update_MVP_n_send(mvpLoc2);
+        }
+
         glUniform1i(grid_szLoc2, grid_sz);
+
+        glVertexAttribDivisor(2, 0);
         glDrawElements(
             GL_TRIANGLE_STRIP,
             sur_ebo.draw_count(),
-            GL_UNSIGNED_INT,
+            GL_UNSIGNED_SHORT,
             nullptr);
-        
+
+        draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+
         glfwSwapBuffers(window);
+        if (inp) inp = false;
+
         glfwPollEvents();
+        
     }
 
     glDeleteProgram(program);
