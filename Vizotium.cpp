@@ -42,21 +42,27 @@ bool win_resized = true;
 
 
 // intconst 
-constexpr int grid_pow = 5;
+constexpr int grid_pow = 8;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
+
 constexpr int offsetInstanceDivisor = grid_sz_sq;
 constexpr int map_instance_count = 2 * grid_sz_sq;
+
 constexpr int offset_layout = 0;
 constexpr int height_layout = 1;
-constexpr int noise_layout = 2;
+constexpr int heightclr_layout = 2;
+constexpr int noise_layout = 3;
+constexpr int noiseclr_layout = 4;
 
+constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
 
 SurfaceEBO<grid_sz> sur_ebo;
 // random fields 
 
 static ComplexNoise<grid_pow> noise;
 static PlainVBO<grid_sz_sq * 2> rndm_field; 
+
 // first half contains the rndm_field 
 //second half contains the noise 
 
@@ -108,10 +114,6 @@ bool process_input(GLFWwindow* win, Camera& cam) {
 }
 
 
-
-
-
-
 int main()
 {
 
@@ -126,8 +128,7 @@ int main()
     reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
     reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
 
-   
-
+  
     linkprogram(surface_program);
 
     glEnable(GL_MULTISAMPLE);
@@ -167,6 +168,9 @@ int main()
     rndm_field.upload_persistant(surface_flags);
     rndm_field_mem = (float*)rndm_field.map_full(surface_flags);
 
+    sur_ebo.bind();
+    sur_ebo.upload(GL_STATIC_DRAW);
+
     glVertexAttribPointer(
         height_layout,
         1,
@@ -175,6 +179,18 @@ int main()
         sizeof(float),
         nullptr
     );
+   
+   glEnableVertexAttribArray(height_layout);
+
+   glVertexAttribPointer(
+       heightclr_layout,
+       1,
+       GL_FLOAT,
+       GL_FALSE,
+       sizeof(float),
+       nullptr
+   );
+   glEnableVertexAttribArray(heightclr_layout);
 
     glVertexAttribPointer(
         noise_layout,
@@ -182,18 +198,24 @@ int main()
         GL_FLOAT,
         GL_TRUE,
         sizeof(float),
-        (void*)grid_sz
+        (void*)(noise_layout_stride)
     );
+    glEnableVertexAttribArray(noise_layout);
 
-    sur_ebo.bind();
-    sur_ebo.upload(GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-
-    offset.bind();
 
     glVertexAttribPointer(
+        noiseclr_layout,
+        1,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(float),
+        (void*)noise_layout_stride
+    );
+   glEnableVertexAttribArray(noiseclr_layout);
+   
+
+   offset.bind();
+   glVertexAttribPointer(
         offset_layout,
         3,
         GL_FLOAT,
@@ -201,14 +223,13 @@ int main()
         sizeof(glm::vec3),
         nullptr
     );
+    glEnableVertexAttribArray(offset_layout);
+    glVertexAttribDivisor(offset_layout, grid_sz); // first the ortho progrction will be drawn 
 
 
     glUseProgram(surface_program);
     glUniform1i(grid_szLoc, grid_sz);
-    
-    glVertexAttribDivisor(offset_layout,grid_sz); // first the ortho progrction will be drawn 
-    glVertexAttribDivisor(height_layout, grid_sz); 
-    glVertexAttribDivisor(noise_layout, grid_sz);
+    glUniform2fv(mapscaleLoc, 1, &mapscale[0]);
 
     bool inp = true;
 
@@ -217,6 +238,7 @@ int main()
     {
 
         Time.update();
+        inp = process_input(window, camera);
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -231,17 +253,26 @@ int main()
             inp = false;
         }
 
-        glVertexAttribDivisor(2, 0);
-        glDrawElementsInstanced(
+        /*glDrawElements(
             GL_TRIANGLE_STRIP,
             sur_ebo.draw_count(),
             GL_UNSIGNED_SHORT,
-            nullptr,3);
+            nullptr);
+
+        */
+
+        glDrawElements(
+            GL_TRIANGLE_STRIP,
+            sur_ebo.draw_count(),
+            GL_UNSIGNED_SHORT,
+            nullptr);
+
+        //glDrawArrays(GL_TRIANGLE_STRIP, 0, grid_sz_sq);
 
         draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
-        inp = process_input(window, camera);
+       
 
     }
 

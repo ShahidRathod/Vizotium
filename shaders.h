@@ -7,6 +7,9 @@
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 offset;
 layout(location = 2) in float height;
+layout(location = 3) in float height_clr;
+layout(location = 4) in float noise;
+
 
 uniform vec3 scale;
 uniform int grid_sz;
@@ -29,13 +32,15 @@ vec3 color(float h)
 const vec3 xyoffset = vec3(0, 0, 0);
 
 <xyzcoords>
+
 vec3 xyzcoords(int i, float h) {
-    i = -grid_sz / 2 + i % (grid_sz * grid_sz);
-    float x = (i % grid_sz) / grid_sz;
-    float y = (i / grid_sz) / grid_sz;
-    return vec3(x, y, h) ;
+    i = i % (grid_sz * grid_sz);
+    float x = (i % grid_sz) ;
+    float y = (i / grid_sz) ;
+    return vec3(x/grid_sz - 0.5, y/grid_sz - 0.5, h);
 }
 < / xyzcoords>
+
 
 
 void main()
@@ -48,6 +53,9 @@ void main()
 }
 
 < / vertex>
+
+
+
 
 <fragment>
 
@@ -73,10 +81,12 @@ void main()
 
 layout(location = 0) in vec3 offset;
 layout(location = 1) in float height;
-layout(location = 2) in float noise;
+layout(location = 2) in float heightclr;
+layout(location = 3) in float noise;
+layout(location = 4) in float noiseclr;
+
 uniform int grid_sz;
 uniform vec2 mapscale;
-
 uniform mat4 MVP;
 
 out vec3 clr;
@@ -87,28 +97,47 @@ out vec3 clr;
 
 void main() {
     
-    int ins_id = gl_InstanceID;
-    float h;
+    /*int ins_id = gl_InstanceID;
+    float h = 0;
 
     vec3 coords = xyzcoords(gl_VertexID, h);
-    if (ins_id == 0) {
+    clr = vec3(1, 1, 1);
+
+    /*if (ins_id == 0) {
         h = noise;
     }
     else {
         h = height;
     }
+    
 
-    clr = color(h);
+    clr = color(h);*/
 
+    /*
     vec4 pos = vec4(coords, 1);
     
-    if (ins_id == 2) pos = MVP * pos;
-    else             pos.xy = pos.xy * mapscale;
+    //if (ins_id == 2) pos = MVP * pos;
+    //else             pos.xy = pos.xy * mapscale + offset;
 
     gl_Position = pos;
+
+    */
+
+    float h = noise;
+    clr = color(noiseclr);
     
+    int v = gl_VertexID;
+    vec3 coords;
+
+    float x = float((v / 2) % 2 == 0);
+    float y = float(v / 4 + v % 2 == 0);
     
+    coords = vec3(x, y, h);
     
+    coords = xyzcoords(v, h);
+    coords.yz = coords.zy;
+
+    gl_Position = MVP*vec4(coords,1);
 
 }
 
