@@ -369,6 +369,12 @@ struct ComplexNoise {
         apply_scaling(inten);
     }
 
+    void make_new_field() {
+        init_noise();
+        apply_spectral_bias();
+        fft.inverse_fft();
+    }
+
     ComplexNoise() {
         OmegaTabel<sz, sz>::make_omega();
         noise = fft.input;

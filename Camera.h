@@ -49,6 +49,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
+
 struct Camera {
     float yaw = 0.1f;
     float pitch = 0.1f;
@@ -58,6 +59,7 @@ struct Camera {
     float aspect = 1280.0f / 720.0f;
 
     glm::mat4 mvp = glm::mat4(1.0f);
+    glm::mat4 map_mvp = glm::mat4(1.0f);
 
     Camera() {
         yaw = 0.1;

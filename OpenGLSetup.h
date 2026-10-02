@@ -27,7 +27,7 @@ GLuint create_program(const char* vs_src, const char* fs_src) {
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vs_src);
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
 
-   
+
     GLuint prog = glCreateProgram();
 
     glAttachShader(prog, vs);
@@ -65,25 +65,45 @@ void linkprogram(GLuint prog) {
 float winwidth = 1280;
 float winheight = 720;
 
-extern Camera camera;
-extern glm::vec3 mapscale;
-extern bool win_resized;
+Camera camera;
+extern glm::vec2 mapscale;
 extern const int  grid_sz;
+extern bool win_resized ;
 
 void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
     winwidth = float(width);
     winheight = float(height);
-    
+
 
     camera.aspect = winwidth / winheight;
 
-    mapscale = { height,width,1};
+    mapscale = glm::vec2{ height,width };
     mapscale = glm::normalize(mapscale);
     mapscale /= (grid_sz);
     win_resized = true;
 }
 
+
+struct TimeObj {
+    float time = 0.0;
+    float inc = 0.01;
+    bool status = true;
+    float time_stmp = 0;
+    void stop_start() {
+        if (time_stmp >= inc * 10) {
+            status = !status;
+            time_stmp = 0;
+        }
+
+    }
+    void update() {
+        if (status) time += inc;
+        time_stmp += inc;
+    }
+
+};
+TimeObj Time{};
 
 GLFWwindow* make_window() {
 
@@ -93,7 +113,7 @@ GLFWwindow* make_window() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    
+
     GLFWwindow* window =
         glfwCreateWindow(winwidth, winheight, "vizotium", nullptr, nullptr);
 
@@ -115,3 +135,20 @@ GLFWwindow* make_window() {
 
     return window;
 }
+
+
+#define KEY_FUNC_HLPR(key, func)                      \
+    (glfwGetKey(win, GLFW_KEY_##key) == GLFW_PRESS) { \
+        key_press = true;                             \
+        func;                                         \
+        cout << #key;                                 \
+    }
+
+#define KEY_FUNC_ELSE_IF(key, func) else if KEY_FUNC_HLPR (key, func)
+#define KEY_FUNC_IF(key, func) if KEY_FUNC_HLPR (key, func)
+
+
+
+
+#define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
+

@@ -9,7 +9,6 @@ layout(location = 1) in vec3 offset;
 layout(location = 2) in float height;
 
 uniform vec3 scale;
-uniform mat4 MVP;
 uniform int grid_sz;
 
 out vec3 clr;
@@ -27,20 +26,21 @@ vec3 color(float h)
 }
 < / viridis>
 
-const vec3 xyoffset = vec3(0,0,0);
+const vec3 xyoffset = vec3(0, 0, 0);
 
 <xyzcoords>
-vec3 xyzcoords(int i,float h) {
-    i = i % (grid_sz * grid_sz);
-    float x = i % grid_sz;
-    float y = i / (grid_sz);
-    return vec3(x, y, h) + xyoffset;
+vec3 xyzcoords(int i, float h) {
+    i = -grid_sz / 2 + i % (grid_sz * grid_sz);
+    float x = (i % grid_sz) / grid_sz;
+    float y = (i / grid_sz) / grid_sz;
+    return vec3(x, y, h) ;
 }
-</xyzcoords>
+< / xyzcoords>
+
 
 void main()
 {
-    vec3 mappoint = xyzcoords(gl_InstanceID,0);
+    vec3 mappoint = xyzcoords(gl_InstanceID, 0);
 
     clr = color(height);
     gl_Position = vec4(scale * (pos + mappoint) + offset, 1.0);
@@ -70,30 +70,54 @@ void main()
 <vertex>
 
 #version 440 core
-layout(location = 2) in float height;
+
+layout(location = 0) in vec3 offset;
+layout(location = 1) in float height;
+layout(location = 2) in float noise;
 uniform int grid_sz;
+uniform vec2 mapscale;
+
 uniform mat4 MVP;
+
 out vec3 clr;
 
 <$viridis>
-const vec3 xyoffset = vec3(-grid_sz/2, -grid_sz/2, 0);
 <$xyzcoords>
-void main () {
 
-    float h = 8*height;
-    clr = color(height);
-    vec3 coords = xyzcoords(gl_VertexID,h);
-    coords.yz = coords.zy;
-    gl_Position = MVP*vec4(coords, grid_sz) / (grid_sz);
+
+void main() {
+    
+    int ins_id = gl_InstanceID;
+    float h;
+
+    vec3 coords = xyzcoords(gl_VertexID, h);
+    if (ins_id == 0) {
+        h = noise;
+    }
+    else {
+        h = height;
+    }
+
+    clr = color(h);
+
+    vec4 pos = vec4(coords, 1);
+    
+    if (ins_id == 2) pos = MVP * pos;
+    else             pos.xy = pos.xy * mapscale;
+
+    gl_Position = pos;
+    
+    
+    
 
 }
 
-</vertex>
+< / vertex>
 
 <fragment>
 
 <$heightmap:fragment>
 
-</fragment>
+< / fragment>
 
 < / surface>
