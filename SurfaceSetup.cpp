@@ -1,9 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <cstring>
-
-#include <glad/glad.h>
-#include <glm/glm.hpp>
+#include "pch.h"
 
 #include "glbuffers.h"
 #include "Gaussian.h"
@@ -14,6 +9,12 @@
 GLuint compile_shader(GLenum type, const char* src);
 
 #include "ShaderLoader.h"
+
+// Free function defined in OpenGLSetup.h (compiled via Vizotium.cpp).
+// Forward-declared here (before ShaderLoader.h) so the template
+// definition context in that header sees the name; no logic change.
+GLuint compile_shader(GLenum type, const char* src);
+
 
 // Defined in OpenGLSetup.h (compiled via Vizotium.cpp); declared here
 // so SurfaceSetup.cpp stays a single file without that header.

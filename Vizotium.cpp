@@ -1,5 +1,4 @@
-
-#define _CRT_SECURE_NO_WARNINGS
+#include "pch.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -7,12 +6,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "OpenGLSetup.h"
-#include "glbuffers.h"
-#include "Gaussian.h"
-#include "ShaderLoader.h"
 
 // Surface state and setup live in SurfaceSetup.cpp (single file, no header).
 // Only the entry points used below are declared here.
+
 GLuint surface_setup();
 void update_mapscale();
 void draw_field();
@@ -58,7 +55,6 @@ int main()
     mat_debug = false;
 
     GLFWwindow* window = make_window();
-
     GLuint surface_program = surface_setup();
 
     bool inp = true;
