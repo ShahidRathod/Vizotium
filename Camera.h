@@ -49,21 +49,20 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
+extern glm::vec3* surface_offset;
 
 struct Camera {
-    float yaw = 0.1f;
+    float yaw = 90.f;
     float pitch = 0.1f;
     float scale = 0;
 
     float fov = 55.0f;
     float aspect = 1280.0f / 720.0f;
-
-    glm::mat4 mvp = glm::mat4(1.0f);
-    glm::mat4 map_mvp = glm::mat4(1.0f);
+    glm::vec3 offset{ .2f };
 
     Camera() {
         yaw = 0.1;
-        pitch = 0.1;
+        pitch = 60;
         scale = 1;
     }
 
@@ -101,14 +100,16 @@ struct Camera {
     }
 
     glm::mat4 perspective() {
+
         glm::mat4 pers = glm::perspective(RAD(fov), aspect, 0.01f, 25.0f);
         DEBUG_MATRIX(pers);
         return pers;
     }
 
     glm::mat4 view() {
-        glm::mat4 view;
-
+        glm::mat4 view (1);
+        //view = glm::translate(view, *surface_offset);
+        //std::cout << "yaw: " << yaw<<"pitch"<<pitch;
         float cy = cos(RAD(yaw));
         float sy = sin(RAD(yaw));
         float cp = cos(RAD(pitch));
@@ -123,15 +124,20 @@ struct Camera {
         );
 
         int sign = sgn(cp);
-
         std::cout << "\nsign: " << sign;
-        view = glm::lookAt(glm::vec3(eye), glm::vec3(0, 0, 0), glm::vec3(0, sign * 1, 0));
+
+
+        view *= glm::lookAt(glm::vec3(eye), glm::vec3(0,0,0), glm::vec3(0, sign * 1, 0));
+        //view = glm::translate(view, offset);
         DEBUG_MATRIX(view);
         return view;
     }
 
     glm::mat4 update_MVP() {
-        glm::mat4 mvp = (perspective() * (view()));
+
+       
+        glm::mat4 mvp = ( perspective()*view());
+        //mvp= glm::translate(mvp,*surface_offset);
         DEBUG_MATRIX(mvp);
         return mvp;
     }

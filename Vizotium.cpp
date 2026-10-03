@@ -1,3 +1,4 @@
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <iostream>
@@ -7,8 +8,8 @@
 #include <GLFW/glfw3.h>
 #include "OpenGLSetup.h"
 #include "glbuffers.h"
-#include "ShaderLoader.h"
 #include "Gaussian.h"
+#include "ShaderLoader.h"
 
 using std::cout, std::cerr;
 
@@ -22,27 +23,22 @@ void update_MVP_n_send(GLuint mvp_location) {
 
 
 
-struct Vertex {
-    float x, y, z;
+
+VBO<3, glm::vec3> offset;
+
+glm::vec3 offset_data[] = {
+    {  -0.73, 1-.53, 0.0f },
+    { -0.73, -.53, 0.0f },
+    { 1, 0.0f, 0.0f },
 };
-
-
-
-VBO<3, Vertex> offset;
-Vertex offset_data[] = {
-    { -.95, -.9, 0.0f },
-    {  -.95, .05, 0.0f },
-    {0,0,0}
-};
-
-Vertex* offset_ptr;
-
-glm::vec2 mapscale = { 0.1,0.1 };
-bool win_resized = true; 
-
+glm::vec3* surface_offset = &offset_data[2];
+glm::vec3 * offset_ptr;
+glm::vec2 mapscale = { 1.f,1.f};
+bool win_resized = true;
 
 // intconst 
-constexpr int grid_pow = 8;
+
+constexpr int grid_pow = 7;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
@@ -54,7 +50,6 @@ constexpr int height_layout = 1;
 constexpr int heightclr_layout = 2;
 constexpr int noise_layout = 3;
 constexpr int noiseclr_layout = 4;
-
 constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
 
 SurfaceEBO<grid_sz> sur_ebo;
@@ -211,34 +206,35 @@ int main()
         sizeof(float),
         (void*)noise_layout_stride
     );
-   glEnableVertexAttribArray(noiseclr_layout);
-   
+    glEnableVertexAttribArray(noiseclr_layout);
 
-   offset.bind();
-   glVertexAttribPointer(
+    offset.bind();
+    offset.upload(GL_STATIC_DRAW);
+    glVertexAttribPointer(
         offset_layout,
         3,
         GL_FLOAT,
         GL_TRUE,
-        sizeof(glm::vec3),
+        3*sizeof(float),
         nullptr
     );
     glEnableVertexAttribArray(offset_layout);
-    glVertexAttribDivisor(offset_layout, grid_sz); // first the ortho progrction will be drawn 
+    glVertexAttribDivisor(offset_layout, 1); // first the ortho progrction will be drawn 
 
 
     glUseProgram(surface_program);
     glUniform1i(grid_szLoc, grid_sz);
-    glUniform2fv(mapscaleLoc, 1, &mapscale[0]);
+    glUniform2fv(mapscaleLoc, 2, &mapscale[0]);
 
     bool inp = true;
+
 
     framebuffer_size_callback(window, winwidth, winheight);
     while (!glfwWindowShouldClose(window))
     {
 
         Time.update();
-        inp = process_input(window, camera);
+        
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -253,26 +249,19 @@ int main()
             inp = false;
         }
 
-        /*glDrawElements(
+        glDrawElementsInstanced(
             GL_TRIANGLE_STRIP,
             sur_ebo.draw_count(),
             GL_UNSIGNED_SHORT,
-            nullptr);
-
-        */
-
-        glDrawElements(
-            GL_TRIANGLE_STRIP,
-            sur_ebo.draw_count(),
-            GL_UNSIGNED_SHORT,
-            nullptr);
+            nullptr,
+            3);
 
         //glDrawArrays(GL_TRIANGLE_STRIP, 0, grid_sz_sq);
 
         draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
-       
+        inp = process_input(window, camera);
 
     }
 

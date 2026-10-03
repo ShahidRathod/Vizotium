@@ -66,6 +66,7 @@ float winwidth = 1280;
 float winheight = 720;
 
 Camera camera;
+
 extern glm::vec2 mapscale;
 extern const int  grid_sz;
 extern bool win_resized ;
@@ -80,7 +81,6 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 
     mapscale = glm::vec2{ height,width };
     mapscale = glm::normalize(mapscale);
-    mapscale /= (grid_sz);
     win_resized = true;
 }
 
@@ -151,4 +151,3 @@ GLFWwindow* make_window() {
 
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
-

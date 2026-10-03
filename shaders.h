@@ -13,8 +13,8 @@ layout(location = 4) in float noise;
 
 uniform vec3 scale;
 uniform int grid_sz;
-
 out vec3 clr;
+
 <viridis>
 vec3 color(float h)
 {
@@ -97,56 +97,60 @@ out vec3 clr;
 
 void main() {
     
-    /*int ins_id = gl_InstanceID;
-    float h = 0;
-
+    int ins_id = gl_InstanceID;
+    
+    float h = height;
+    float color_h = (ins_id == 0) ? noise : height;
+    
     vec3 coords = xyzcoords(gl_VertexID, h);
-    clr = vec3(1, 1, 1);
+    clr = color(color_h);
 
-    /*if (ins_id == 0) {
-        h = noise;
+    
+    
+    if (ins_id == 2)
+    {
+        coords.yz = coords.zy;
+        gl_Position = MVP * vec4(coords, 1);//+ vec4(offset,1);
     }
     else {
-        h = height;
+        coords.xy *= mapscale;
+        coords.xy += offset.xy;
+        gl_Position = vec4(coords,1);
+        //gl_Position.xy += offset.xy;
     }
     
-
-    clr = color(h);*/
-
-    /*
-    vec4 pos = vec4(coords, 1);
-    
-    //if (ins_id == 2) pos = MVP * pos;
-    //else             pos.xy = pos.xy * mapscale + offset;
-
-    gl_Position = pos;
-
-    */
-
-    float h = noise;
-    clr = color(noiseclr);
-    
-    int v = gl_VertexID;
-    vec3 coords;
-
-    float x = float((v / 2) % 2 == 0);
-    float y = float(v / 4 + v % 2 == 0);
-    
-    coords = vec3(x, y, h);
-    
-    coords = xyzcoords(v, h);
-    coords.yz = coords.zy;
-
-    gl_Position = MVP*vec4(coords,1);
-
 }
 
 < / vertex>
 
 <fragment>
-
 <$heightmap:fragment>
 
-< / fragment>
 
+< / fragment>
 < / surface>
+
+
+<line>
+
+<vertex>
+#version 440 core
+
+struct Line {
+    vec3 p1;
+    vec3 p2;
+};
+
+layout(location = 5) in Line line;
+
+
+void main(){
+
+}
+</vertex>
+
+<fragment>
+
+</fragment>
+
+<line>

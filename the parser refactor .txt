@@ -57,3 +57,12 @@ we will only return a compiled shader and do the malloc
 compile_shader ("entity name", Gl_shader_macro)
 
 maclloc too 
+
+
+
+[7/8/26]
+
+I just realized that if a copy tag has paste in it that pastes it self the tree will parse success fully but the write function will go infinite recursion . if a <exec>tag is added that manipulated varibles , which is declared outside the scope of the content or in the execute varibles. then we can go far for making a confitional and functional parameters  paste </exec>
+
+
+
