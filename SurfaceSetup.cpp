@@ -3,21 +3,10 @@
 #include "glbuffers.h"
 #include "Gaussian.h"
 
-// Free function defined in OpenGLSetup.h (compiled via Vizotium.cpp).
-// Forward-declared here (before ShaderLoader.h) so the template
-// definition context in that header sees the name; no logic change.
 GLuint compile_shader(GLenum type, const char* src);
 
 #include "ShaderLoader.h"
 
-// Free function defined in OpenGLSetup.h (compiled via Vizotium.cpp).
-// Forward-declared here (before ShaderLoader.h) so the template
-// definition context in that header sees the name; no logic change.
-GLuint compile_shader(GLenum type, const char* src);
-
-
-// Defined in OpenGLSetup.h (compiled via Vizotium.cpp); declared here
-// so SurfaceSetup.cpp stays a single file without that header.
 void linkprogram(GLuint prog);
 
 constexpr int grid_pow = 7;
@@ -59,17 +48,13 @@ float* rndm_field_mem;
 
 GLsync draw_done;
 
-// Single shared shader reader: every shader compile uses this.
 ShaderReader<4000, 64> reader("shaders.h");
 
-// Surface program handle, its uniform locations, and its VAOs.
-// Locations are queried once in setup_surface; draw_field re-binds
-// program + vao explicitly every frame (more programs will come).
 GLuint surface_program = 0;
 GLuint grid_szLoc;
 GLuint mvpLoc;
 GLuint mapscaleLoc;
-GLuint vaos[4]; // vaos[0] is the surface vao bound for drawing
+GLuint vaos[4];
 
 void setup_surface(GLuint program) {
     memcpy(offset.data, &offset_data, sizeof(offset_data));
@@ -232,3 +217,5 @@ void draw_field() {
 
     draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
+
+
