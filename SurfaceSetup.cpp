@@ -1,4 +1,22 @@
-#include "SurfaceSetup.h"
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+
+#include "glbuffers.h"
+#include "Gaussian.h"
+
+constexpr int grid_pow = 7;
+constexpr int grid_sz = 1 << grid_pow;
+constexpr int grid_sz_sq = grid_sz * grid_sz;
+
+constexpr int offsetInstanceDivisor = grid_sz_sq;
+constexpr int map_instance_count = 2 * grid_sz_sq;
+
+constexpr int offset_layout = 0;
+constexpr int height_layout = 1;
+constexpr int heightclr_layout = 2;
+constexpr int noise_layout = 3;
+constexpr int noiseclr_layout = 4;
+constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
 
 VBO<3, glm::vec3> offset;
 
@@ -20,6 +38,9 @@ PlainVBO<grid_sz_sq * 2> rndm_field;
 
 // first half contains the rndm_field
 //second half contains the noise
+
+// Mapped pointer to rndm_field storage (defined in Vizotium.cpp)
+extern float* rndm_field_mem;
 
 void setup_surface(GLuint surface_program,
                    GLuint& grid_szLoc,

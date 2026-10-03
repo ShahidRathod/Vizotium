@@ -10,7 +10,28 @@
 #include "glbuffers.h"
 #include "Gaussian.h"
 #include "ShaderLoader.h"
-#include "SurfaceSetup.h"
+// Surface state is defined in SurfaceSetup.cpp (single file, no header).
+// Declarations below mirror its definitions; values unchanged.
+constexpr int grid_pow = 7;
+constexpr int grid_sz = 1 << grid_pow;
+constexpr int grid_sz_sq = grid_sz * grid_sz;
+
+extern VBO<3, glm::vec3> offset;
+extern glm::vec3 offset_data[3];
+extern glm::vec3* surface_offset;
+extern glm::vec3* offset_ptr;
+extern glm::vec2 mapscale;
+extern bool win_resized;
+
+extern SurfaceEBO<grid_sz> sur_ebo;
+
+extern ComplexNoise<grid_pow> noise;
+extern PlainVBO<grid_sz_sq * 2> rndm_field;
+
+void setup_surface(GLuint surface_program,
+                   GLuint& grid_szLoc,
+                   GLuint& mvpLoc,
+                   GLuint& mapscaleLoc);
 
 using std::cout, std::cerr;
 
@@ -96,6 +117,7 @@ int main()
     GLuint grid_szLoc;
     GLuint mvpLoc;
     GLuint mapscaleLoc;
+
     setup_surface(surface_program, grid_szLoc, mvpLoc, mapscaleLoc);
 
     bool inp = true;
