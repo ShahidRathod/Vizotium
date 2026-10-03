@@ -1,3 +1,4 @@
+#pragma once
 #include <random>
 #include <functional>
 #include <cmath>
@@ -17,7 +18,7 @@ struct ComplexArray {
     T real[sz], imag[sz];
 };
 
-std::stringstream content;
+inline std::stringstream content;
 
 template <int n> using ComplexArrayFloat = ComplexArray<float, n>;
 using ComplexT = ComplexArrayFloat<1>;
@@ -32,15 +33,15 @@ template <typename T>
 inline T sqre(T x) { return x * x; };
 
 
-float mag_f(float a, float b) { return std::sqrt(sqre(a) + sqre(b)); }
-float real(float a, float b) { return a; }
-float imag(float a, float b) { return b; }
-float abs_real(float a, float b) { return std::abs(a); }
-float abs_imag(float a, float b) { return std::abs(b); }
-float round_imag(float a, float b) { return (float)(int)(50 * b); }
-float round_real(float a, float b) { return (float)(int)(50 * a); }
+inline float mag_f(float a, float b) { return std::sqrt(sqre(a) + sqre(b)); }
+inline float real(float a, float b) { return a; }
+inline float imag(float a, float b) { return b; }
+inline float abs_real(float a, float b) { return std::abs(a); }
+inline float abs_imag(float a, float b) { return std::abs(b); }
+inline float round_imag(float a, float b) { return (float)(int)(50 * b); }
+inline float round_real(float a, float b) { return (float)(int)(50 * a); }
 
-float hue_func(float a, float b) { return (std::atan2(b, a) + pi) / (2 * pi); }
+inline float hue_func(float a, float b) { return (std::atan2(b, a) + pi) / (2 * pi); }
 //float hue_func(float a, float b) { return (std::atan2(b , a) + pi) / (2 * pi); }
 
 
@@ -60,7 +61,7 @@ void write_var_to(T& var, std::stringstream& stream, const char* lst_name) {
 }
 
 
-void write_plain_arr(float* arr, int sz, int stride, std::stringstream& lst_string) {
+inline void write_plain_arr(float* arr, int sz, int stride, std::stringstream& lst_string) {
     lst_string << "[";
     for (int j = 0; j < sz; j++) {
         float lst_val = arr[j * stride];
@@ -70,14 +71,14 @@ void write_plain_arr(float* arr, int sz, int stride, std::stringstream& lst_stri
     lst_string << "]\n";
 }
 
-void write_plain_lst(float* arr, int sz, int stride, std::stringstream& lst_string, const char* lst_name, int k = -1) {
+inline void write_plain_lst(float* arr, int sz, int stride, std::stringstream& lst_string, const char* lst_name, int k = -1) {
     lst_string << lst_name;
     if (k != -1) lst_string << k;
     lst_string << " = [\n";
     write_plain_arr(arr, sz, stride, lst_string);
 }
 
-void write_lst_to(float* arr, int sz, int d, int stride, std::stringstream& lst_string, const char* lst_name) {
+inline void write_lst_to(float* arr, int sz, int d, int stride, std::stringstream& lst_string, const char* lst_name) {
     lst_string << lst_name;
     lst_string << " = [\n";
     for (int i = 0; i < sz; i++) {

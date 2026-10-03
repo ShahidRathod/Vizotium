@@ -10,6 +10,7 @@
 #include "glbuffers.h"
 #include "Gaussian.h"
 #include "ShaderLoader.h"
+#include "SurfaceSetup.h"
 
 using std::cout, std::cerr;
 
@@ -23,43 +24,6 @@ void update_MVP_n_send(GLuint mvp_location) {
 
 
 
-
-VBO<3, glm::vec3> offset;
-
-glm::vec3 offset_data[] = {
-    {  -0.73, 1-.53, 0.0f },
-    { -0.73, -.53, 0.0f },
-    { 1, 0.0f, 0.0f },
-};
-glm::vec3* surface_offset = &offset_data[2];
-glm::vec3 * offset_ptr;
-glm::vec2 mapscale = { 1.f,1.f};
-bool win_resized = true;
-
-// intconst 
-
-constexpr int grid_pow = 7;
-constexpr int grid_sz = 1 << grid_pow;
-constexpr int grid_sz_sq = grid_sz * grid_sz;
-
-constexpr int offsetInstanceDivisor = grid_sz_sq;
-constexpr int map_instance_count = 2 * grid_sz_sq;
-
-constexpr int offset_layout = 0;
-constexpr int height_layout = 1;
-constexpr int heightclr_layout = 2;
-constexpr int noise_layout = 3;
-constexpr int noiseclr_layout = 4;
-constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
-
-SurfaceEBO<grid_sz> sur_ebo;
-// random fields 
-
-static ComplexNoise<grid_pow> noise;
-static PlainVBO<grid_sz_sq * 2> rndm_field; 
-
-// first half contains the rndm_field 
-//second half contains the noise 
 
 float* rndm_field_mem;
 
