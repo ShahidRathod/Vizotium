@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glad/glad.h>
 #include <glm/glm.hpp>
 
 #include "glbuffers.h"
@@ -35,3 +36,14 @@ extern SurfaceEBO<grid_sz> sur_ebo;
 // second half contains the noise
 extern ComplexNoise<grid_pow> noise;
 extern PlainVBO<grid_sz_sq * 2> rndm_field;
+
+// Mapped pointer to rndm_field storage (defined in Vizotium.cpp)
+extern float* rndm_field_mem;
+
+// Creates buffers, uploads initial field data, sets vertex attribs
+// and uniforms. Returns shader locations via out-params (still
+// needed by the render loop in main). No logic change vs inline block.
+void setup_surface(GLuint surface_program,
+                   GLuint& grid_szLoc,
+                   GLuint& mvpLoc,
+                   GLuint& mapscaleLoc);
