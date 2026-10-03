@@ -1,8 +1,23 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <cstring>
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
 #include "glbuffers.h"
 #include "Gaussian.h"
+
+// Free function defined in OpenGLSetup.h (compiled via Vizotium.cpp).
+// Forward-declared here (before ShaderLoader.h) so the template
+// definition context in that header sees the name; no logic change.
+GLuint compile_shader(GLenum type, const char* src);
+
+#include "ShaderLoader.h"
+
+// Defined in OpenGLSetup.h (compiled via Vizotium.cpp); declared here
+// so SurfaceSetup.cpp stays a single file without that header.
+void linkprogram(GLuint prog);
 
 constexpr int grid_pow = 7;
 constexpr int grid_sz = 1 << grid_pow;
@@ -39,18 +54,29 @@ PlainVBO<grid_sz_sq * 2> rndm_field;
 // first half contains the rndm_field
 //second half contains the noise
 
-// Mapped pointer to rndm_field storage (defined in Vizotium.cpp)
-extern float* rndm_field_mem;
+float* rndm_field_mem;
 
-void setup_surface(GLuint surface_program,
-                   GLuint& grid_szLoc,
-                   GLuint& mvpLoc,
-                   GLuint& mapscaleLoc) {
-    grid_szLoc = glGetUniformLocation(surface_program, "grid_sz");
-    mvpLoc = glGetUniformLocation(surface_program, "MVP");
-    mapscaleLoc = glGetUniformLocation(surface_program, "mapscale");
+GLsync draw_done;
 
-    GLuint vaos[4];
+// Single shared shader reader: every shader compile uses this.
+ShaderReader<4000, 64> reader("shaders.h");
+
+// Surface program handle, its uniform locations, and its VAOs.
+// Locations are queried once in setup_surface; draw_field re-binds
+// program + vao explicitly every frame (more programs will come).
+GLuint surface_program = 0;
+GLuint grid_szLoc;
+GLuint mvpLoc;
+GLuint mapscaleLoc;
+GLuint vaos[4]; // vaos[0] is the surface vao bound for drawing
+
+void setup_surface(GLuint program) {
+    memcpy(offset.data, &offset_data, sizeof(offset_data));
+
+    grid_szLoc = glGetUniformLocation(program, "grid_sz");
+    mvpLoc = glGetUniformLocation(program, "MVP");
+    mapscaleLoc = glGetUniformLocation(program, "mapscale");
+
     GLuint& vao = vaos[0];
     GLuint& mapscalevao = vaos[1];
     GLuint& mapoffsetvao = vaos[2];
@@ -59,7 +85,7 @@ void setup_surface(GLuint surface_program,
     glGenVertexArrays(4, vaos);
     glBindVertexArray(vao);
 
-    //this only generated buffer ids 
+    //this only generated buffer ids
 
     rndm_field.init_buffer();
     offset.init_buffer();
@@ -91,7 +117,7 @@ void setup_surface(GLuint surface_program,
         sizeof(float),
         nullptr
     );
-   
+
    glEnableVertexAttribArray(height_layout);
 
    glVertexAttribPointer(
@@ -136,10 +162,72 @@ void setup_surface(GLuint surface_program,
         nullptr
     );
     glEnableVertexAttribArray(offset_layout);
-    glVertexAttribDivisor(offset_layout, 1); // first the ortho progrction will be drawn 
+    glVertexAttribDivisor(offset_layout, 1); // first the ortho progrction will be drawn
 
 
-    glUseProgram(surface_program);
+    glUseProgram(program);
     glUniform1i(grid_szLoc, grid_sz);
     glUniform2fv(mapscaleLoc, 2, &mapscale[0]);
+}
+
+GLuint surface_setup() {
+    surface_program = glCreateProgram();
+
+    reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
+    reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
+
+    linkprogram(surface_program);
+
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_DEPTH_TEST);
+
+    setup_surface(surface_program);
+
+    return surface_program;
+}
+
+void update_random_field() {
+
+    noise.make_new_field();
+    noise.output_grayscale(rndm_field_mem);
+    noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
+    GLenum type = glClientWaitSync(draw_done, 0, (int)1e4);
+
+    switch (type)
+    {
+    case GL_ALREADY_SIGNALED:
+        std::cout << "already signaled";
+    case GL_CONDITION_SATISFIED:
+        std::cout << "condition satisfied";
+    case GL_TIMEOUT_EXPIRED:
+        std::cout << "time out ";
+    case GL_WAIT_FAILED:
+        std::cout << "error in sync";
+    default:
+        break;
+    }
+    rndm_field.flushfull();
+}
+
+void update_mapscale() {
+    if (win_resized) {
+        glUniform2fv(mapscaleLoc, 1, &mapscale[0]);
+        win_resized = false;
+    }
+}
+
+void draw_field() {
+    glUseProgram(surface_program);
+    glBindVertexArray(vaos[0]);
+
+    glDrawElementsInstanced(
+        GL_TRIANGLE_STRIP,
+        sur_ebo.draw_count(),
+        GL_UNSIGNED_SHORT,
+        nullptr,
+        3);
+
+    //glDrawArrays(GL_TRIANGLE_STRIP, 0, grid_sz_sq);
+
+    draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }

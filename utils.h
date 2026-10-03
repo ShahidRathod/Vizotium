@@ -86,7 +86,7 @@ constexpr ConstexprStr<n_sz, stage_count + cammnds> all_names{
     "vertex,fragment,tess_control,tess_eval,geometry,compute,copy,paste,"
     "scope," };
 
-bool hash_compare(char* str1, char* str2) { return hash(str1) == hash(str2); }
+inline bool hash_compare(char* str1, char* str2) { return hash(str1) == hash(str2); }
 
 template <typename T, int sz>
 struct MemPool {
@@ -214,8 +214,8 @@ struct Tag {
     }
 };
 
-int Tag::counter = 0;
-MemPool<HashNode, 100> Tag::hash_pool;
+inline int Tag::counter = 0;
+inline MemPool<HashNode, 100> Tag::hash_pool;
 
 template <int sz, int max_copy_depth>
 struct TagTree {
@@ -444,7 +444,7 @@ constexpr bool contains(char target, const char* str) {
 }
 
 
-int GLshader_to_index(GLenum enm) {
+inline int GLshader_to_index(GLenum enm) {
     switch (enm) {
     case GL_VERTEX_SHADER:
         return 0;

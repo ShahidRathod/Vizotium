@@ -116,8 +116,8 @@ struct SyntaxData {
     }
 };
 
-SyntaxData tag_data("</$:_>");
-Rule tag_rule[] = {
+inline SyntaxData tag_data("</$:_>");
+inline Rule tag_rule[] = {
     {"/$",  Relation::notcoexist,Inverse::False},
     {"/:",  Relation::notcoexist,Inverse::False},
     {'<',   Relation::singular,  Inverse::False},
