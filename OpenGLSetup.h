@@ -147,7 +147,5 @@ GLFWwindow* make_window() {
 #define KEY_FUNC_ELSE_IF(key, func) else if KEY_FUNC_HLPR (key, func)
 #define KEY_FUNC_IF(key, func) if KEY_FUNC_HLPR (key, func)
 
-
-
-
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
+

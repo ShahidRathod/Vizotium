@@ -7,6 +7,7 @@
 #include "OpenGLSetup.h"
 
 GLuint surface_setup();
+void grid_setup();
 void update_mapscale();
 void draw_field();
 void update_random_field();
@@ -51,6 +52,8 @@ int main()
     GLFWwindow* window = make_window();
     GLuint surface_program = surface_setup();
 
+    grid_setup();
+
     bool inp = true;
 
 
@@ -71,7 +74,7 @@ int main()
             inp = false;
         }
 
-        draw_field();
+        //draw_field();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

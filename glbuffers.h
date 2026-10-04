@@ -6,6 +6,7 @@
 template <int N, typename T> struct ZeroSafeArray {
 	T data[N];
 	ZeroSafeArray() {}
+	T* data_ptr;
 	T& operator[](int i) {
 		return data[i];
 	}
@@ -57,7 +58,7 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 		}
 	}
 
-	void upload(GLuint draw_type) {
+	virtual void upload(GLuint draw_type) {
 		if (!is_binded()) std::cout << "not binded";
 		if constexpr (N > 0) {
 			glBufferData(buffer_type, this->bytesize(), this->data, draw_type);
@@ -101,6 +102,10 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 		flush(0,this->bytesize());
 	}
 
+	void bind_ssbo(GLuint flags,int location) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER,location,this->id);
+	}
+
 	~GlBuffer() {
 		glDeleteBuffers(1, &id);
 	}
@@ -141,7 +146,7 @@ using SurfaceEBOBuffer = GlBuffer<N-1, LineEboGlStrip<EboInt,N>, GL_ELEMENT_ARRA
 
 template <int N>
 struct SurfaceEBO : SurfaceEBOBuffer<N> {
-	
+
 	void init_buffer() {
 		SurfaceEBOBuffer<N>::init_buffer();
 		for (EboInt i = 0; i < N - 1; i++) {
@@ -167,6 +172,6 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 		return this->bytesize()/ (sizeof(EboInt));
 	}
 
-};
 
+};
 

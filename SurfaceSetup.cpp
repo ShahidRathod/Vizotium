@@ -48,13 +48,16 @@ float* rndm_field_mem;
 
 GLsync draw_done;
 
-ShaderReader<4000, 64> reader("shaders.h");
+//ShaderReader<4000, 64> reader("shaders.h");
 
 GLuint surface_program = 0;
+
 GLuint grid_szLoc;
 GLuint mvpLoc;
 GLuint mapscaleLoc;
 GLuint vaos[4];
+
+
 
 void setup_surface(GLuint program) {
     memcpy(offset.data, &offset_data, sizeof(offset_data));
@@ -105,7 +108,6 @@ void setup_surface(GLuint program) {
     );
 
    glEnableVertexAttribArray(height_layout);
-
    glVertexAttribPointer(
        heightclr_layout,
        1,
@@ -114,6 +116,7 @@ void setup_surface(GLuint program) {
        sizeof(float),
        nullptr
    );
+
    glEnableVertexAttribArray(heightclr_layout);
 
     glVertexAttribPointer(
@@ -212,10 +215,40 @@ void draw_field() {
         GL_UNSIGNED_SHORT,
         nullptr,
         3);
-
-    //glDrawArrays(GL_TRIANGLE_STRIP, 0, grid_sz_sq);
-
     draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
+GLuint grid_program;
+GLuint grid_vao;
+GLuint grid_shader_grid_szLoc;
+
+void grid_setup() {
+
+    grid_program = glCreateProgram();
+    glGenVertexArrays(1,&grid_vao);
+    glBindVertexArray(grid_vao);
+
+    linkprogram(grid_program);
+    glUseProgram(grid_program);
+
+    grid_shader_grid_szLoc = glGetUniformLocation(grid_program, "grid_sz");
+    glUniform1i(grid_shader_grid_szLoc, grid_sz);
+
+
+    reader.compile_shader_for("line", GL_VERTEX_SHADER, grid_program);
+    reader.compile_shader_for("line", GL_FRAGMENT_SHADER, grid_program);
+
+    sur_ebo.bind();
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, rndm_field.id);
+    glBindVertexArray(grid_vao);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, rndm_field.id);
+
+}
+
+void draw_grid() {
+
+    glUseProgram(grid_program);
+    glBindVertexArray(grid_vao);
+    glDrawArrays(GL_TRIANGLE_STRIP,0,grid_sz_sq);
+}
 

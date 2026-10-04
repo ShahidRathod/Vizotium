@@ -103,6 +103,7 @@ void main() {
     float color_h = (ins_id == 0) ? noise : height;
     
     vec3 coords = xyzcoords(gl_VertexID, h);
+
     clr = color(color_h);
 
     
@@ -113,6 +114,7 @@ void main() {
         gl_Position = MVP * vec4(coords, 1);//+ vec4(offset,1);
     }
     else {
+
         coords.xy *= mapscale;
         coords.xy += offset.xy;
         gl_Position = vec4(coords,1);
@@ -136,20 +138,52 @@ void main() {
 <vertex>
 #version 440 core
 
-struct Line {
-    vec3 p1;
-    vec3 p2;
+uniform int grid_sz;
+
+layout(binding = 6, std430) readonly buffer line_buffer {
+    float height[];
 };
 
-layout(location = 5) in Line line;
+//uniform vec3 eye;
+//unifrom float thickness;
 
+<$xyzcoords>
 
-void main(){
+void main () {
+
+    int v_id = gl_VertexID;
+    float h = height[v_id];
+    vec3 coords1 = xyzcoords(gl_VertexID, h);
+
+    //vec3 coords2 = xyzcoords(gl_VertexID, h2);
+
+    //vec3 p1 = coords - dot(eye - coords, point);
+    //vec3 p2 = coords - dot(eye - coords, point);
+
+    //vec3 p1 = coords ;
+    //vec3 p2 = coords ;
+    
+    //vec3 p12 = p2 - p1;
+    
+    //p12.x = -p12.y;
+    //p12.x = p12.y;
+
+    gl_Position = coords1;
+    
 
 }
 </vertex>
 
 <fragment>
+#version 440 core
+
+out vec4 FragColor;
+
+
+void main() {
+
+    FragColor = vec4(1, 1, 1, 1);
+}
 
 </fragment>
 
