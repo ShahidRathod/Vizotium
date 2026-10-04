@@ -9,9 +9,12 @@
 GLuint surface_setup();
 void grid_setup();
 void update_mapscale();
-void draw_field();
+void draw_field(bool);
 void update_random_field();
+void draw_grid(bool);
+
 extern GLuint mvpLoc;
+extern GLuint grid_mvpLoc;
 
 using std::cout, std::cerr;
 
@@ -69,13 +72,11 @@ int main()
 
         update_mapscale();
 
-        if (inp) {
-            update_MVP_n_send(mvpLoc);
-            inp = false;
-        }
+      
 
-        //draw_field();
-
+        draw_field(inp);
+        draw_grid(inp);
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
         inp = process_input(window, camera);

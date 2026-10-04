@@ -310,8 +310,8 @@ struct ComplexNoise {
                 double dis = sqre(z - i - 1) + sqre(z - j - 1);
                 double scaled_dis = dis / (double)(z * z);
 
-                constexpr double spec_radii = 0.00001;
-                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 0.8), -1);
+                constexpr double spec_radii = 0.001;
+                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 1.5), -1);
                 //double val = (i == j == z - 1) ? 1 : 0.1;
 
                 set_vals(spectral_bias, (float)val,
@@ -360,7 +360,15 @@ struct ComplexNoise {
     }
 
     void output_grayscale(float* mag_arr) {
-        make_arr(fft.y_arr(), mag_arr, abs_real);
+        make_arr(fft.y_arr(), mag_arr, real);
+
+        for (int i = 0; i < sz; i++) {
+            for (int j = 0; j < sz; j++) {
+                mag_arr[i + sz * j] *= (1 - 2 * ((i + j) % 2 == 0));
+
+            }
+        }
+        
         apply_scaling(mag_arr);
     }
 

@@ -108,8 +108,7 @@ struct Camera {
 
     glm::mat4 view() {
         glm::mat4 view (1);
-        //view = glm::translate(view, *surface_offset);
-        //std::cout << "yaw: " << yaw<<"pitch"<<pitch;
+       
         float cy = cos(RAD(yaw));
         float sy = sin(RAD(yaw));
         float cp = cos(RAD(pitch));
@@ -128,7 +127,6 @@ struct Camera {
 
 
         view *= glm::lookAt(glm::vec3(eye), glm::vec3(0,0,0), glm::vec3(0, sign * 1, 0));
-        //view = glm::translate(view, offset);
         DEBUG_MATRIX(view);
         return view;
     }

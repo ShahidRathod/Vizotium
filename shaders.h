@@ -35,8 +35,13 @@ const vec3 xyoffset = vec3(0, 0, 0);
 
 vec3 xyzcoords(int i, float h) {
     i = i % (grid_sz * grid_sz);
-    float x = (i % grid_sz) ;
-    float y = (i / grid_sz) ;
+    int x_i = (i % grid_sz) ;
+    int y_i = (i / grid_sz) ;
+    
+    float x = x_i;
+    float y = y_i;
+
+    int is_even = int((x_i + y_i) % 2 != 0);
     return vec3(x/grid_sz - 0.5, y/grid_sz - 0.5, h);
 }
 < / xyzcoords>
@@ -139,11 +144,13 @@ void main() {
 #version 440 core
 
 uniform int grid_sz;
+unifrom int MVP;
 
 layout(binding = 6, std430) readonly buffer line_buffer {
     float height[];
 };
 
+layout(location = 5) in vec3 height;
 //uniform vec3 eye;
 //unifrom float thickness;
 
@@ -152,7 +159,8 @@ layout(binding = 6, std430) readonly buffer line_buffer {
 void main () {
 
     int v_id = gl_VertexID;
-    float h = height[v_id];
+    float h = height;
+    
     vec3 coords1 = xyzcoords(gl_VertexID, h);
 
     //vec3 coords2 = xyzcoords(gl_VertexID, h2);
@@ -168,7 +176,7 @@ void main () {
     //p12.x = -p12.y;
     //p12.x = p12.y;
 
-    gl_Position = coords1;
+    gl_Position = vec4(coords1, 1);
     
 
 }

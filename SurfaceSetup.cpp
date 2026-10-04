@@ -1,15 +1,15 @@
 #include "pch.h"
-
 #include "glbuffers.h"
 #include "Gaussian.h"
 
 GLuint compile_shader(GLenum type, const char* src);
 
 #include "ShaderLoader.h"
+//#include "OpenGLSetup.h"
 
 void linkprogram(GLuint prog);
 
-constexpr int grid_pow = 7;
+constexpr int grid_pow = 8;
 constexpr int grid_sz = 1 << grid_pow;
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
@@ -22,6 +22,8 @@ constexpr int heightclr_layout = 2;
 constexpr int noise_layout = 3;
 constexpr int noiseclr_layout = 4;
 constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
+
+void update_MVP_n_send(GLuint loc);
 
 VBO<3, glm::vec3> offset;
 
@@ -205,50 +207,61 @@ void update_mapscale() {
     }
 }
 
-void draw_field() {
+void draw_field(bool inp) {
     glUseProgram(surface_program);
     glBindVertexArray(vaos[0]);
 
+
+    if (inp) update_MVP_n_send(mvpLoc);
+    
     glDrawElementsInstanced(
         GL_TRIANGLE_STRIP,
         sur_ebo.draw_count(),
         GL_UNSIGNED_SHORT,
         nullptr,
         3);
+
     draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 
 GLuint grid_program;
-GLuint grid_vao;
 GLuint grid_shader_grid_szLoc;
+GLuint grid_mvpLoc;
 
 void grid_setup() {
 
     grid_program = glCreateProgram();
-    glGenVertexArrays(1,&grid_vao);
-    glBindVertexArray(grid_vao);
-
+ 
     linkprogram(grid_program);
     glUseProgram(grid_program);
 
+
+    sur_ebo.bind();
+    rndm_field.bind();
+
     grid_shader_grid_szLoc = glGetUniformLocation(grid_program, "grid_sz");
+    grid_mvpLoc= glGetUniformLocation(grid_program, "grid_sz");
+
     glUniform1i(grid_shader_grid_szLoc, grid_sz);
-
-
+  
     reader.compile_shader_for("line", GL_VERTEX_SHADER, grid_program);
     reader.compile_shader_for("line", GL_FRAGMENT_SHADER, grid_program);
 
-    sur_ebo.bind();
+    
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, rndm_field.id);
-    glBindVertexArray(grid_vao);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, rndm_field.id);
-
+    
 }
 
-void draw_grid() {
+
+void draw_grid(bool inp) {
 
     glUseProgram(grid_program);
-    glBindVertexArray(grid_vao);
-    glDrawArrays(GL_TRIANGLE_STRIP,0,grid_sz_sq);
+
+    if (inp) update_MVP_n_send(grid_mvpLoc);
+    
+    glBindVertexArray(vaos[0]);
+    glDrawElements(GL_TRIANGLE_STRIP,0,grid_sz_sq,0);
+
 }
 
