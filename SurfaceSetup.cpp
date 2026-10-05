@@ -2,7 +2,9 @@
 #include "glbuffers.h"
 #include "Gaussian.h"
 
-GLuint compile_shader(GLenum type, const char* src);
+#define glerror(str)  std::cout <<  str << glGetError() << "\n";
+
+GLuint compile_shader(GLenum type, const char* src,GLint& success);
 
 #include "ShaderLoader.h"
 //#include "OpenGLSetup.h"
@@ -62,19 +64,22 @@ GLuint vaos[4];
 
 
 void setup_surface(GLuint program) {
-    memcpy(offset.data, &offset_data, sizeof(offset_data));
 
+    memcpy(offset.data, &offset_data, sizeof(offset_data));
+    glerror(" e1");
     grid_szLoc = glGetUniformLocation(program, "grid_sz");
     mvpLoc = glGetUniformLocation(program, "MVP");
     mapscaleLoc = glGetUniformLocation(program, "mapscale");
-
+    glerror(" e2");
     GLuint& vao = vaos[0];
     GLuint& mapscalevao = vaos[1];
     GLuint& mapoffsetvao = vaos[2];
     GLuint& sur_vao = vaos[3];
+    glerror(" e3");
 
     glGenVertexArrays(4, vaos);
     glBindVertexArray(vao);
+    glerror(" e4");
 
     //this only generated buffer ids
 
@@ -82,10 +87,15 @@ void setup_surface(GLuint program) {
     offset.init_buffer();
     sur_ebo.init_buffer();
 
+    glerror(" e5");
+
 
     rndm_field.bind();
+    glerror(" e6");
 
     noise.make_new_field();
+    glerror(" e7");
+
     noise.output_grayscale(rndm_field.data);
     noise.grayscale_noise(rndm_field.data + grid_sz_sq);
 
@@ -93,9 +103,11 @@ void setup_surface(GLuint program) {
         GL_MAP_WRITE_BIT |
         GL_MAP_PERSISTENT_BIT |
         GL_MAP_COHERENT_BIT;
+  
 
     rndm_field.upload_persistant(surface_flags);
     rndm_field_mem = (float*)rndm_field.map_full(surface_flags);
+    glerror(" e8");
 
     sur_ebo.bind();
     sur_ebo.upload(GL_STATIC_DRAW);
@@ -109,6 +121,8 @@ void setup_surface(GLuint program) {
         nullptr
     );
 
+   glerror(" e9");
+   
    glEnableVertexAttribArray(height_layout);
    glVertexAttribPointer(
        heightclr_layout,
@@ -121,6 +135,8 @@ void setup_surface(GLuint program) {
 
    glEnableVertexAttribArray(heightclr_layout);
 
+   glerror(" e10");
+
     glVertexAttribPointer(
         noise_layout,
         1,
@@ -130,6 +146,7 @@ void setup_surface(GLuint program) {
         (void*)(noise_layout_stride)
     );
     glEnableVertexAttribArray(noise_layout);
+    glerror(" e11");
 
 
     glVertexAttribPointer(
@@ -142,6 +159,8 @@ void setup_surface(GLuint program) {
     );
     glEnableVertexAttribArray(noiseclr_layout);
 
+    glerror(" e12");
+
     offset.bind();
     offset.upload(GL_STATIC_DRAW);
     glVertexAttribPointer(
@@ -152,28 +171,34 @@ void setup_surface(GLuint program) {
         3*sizeof(float),
         nullptr
     );
+
     glEnableVertexAttribArray(offset_layout);
     glVertexAttribDivisor(offset_layout, 1); // first the ortho progrction will be drawn
 
+    glerror(" e13");
 
     glUseProgram(program);
     glUniform1i(grid_szLoc, grid_sz);
-    glUniform2fv(mapscaleLoc, 2, &mapscale[0]);
+    //glUniform2fv(mapscaleLoc, 2, &mapscale[0]);
+    
+    glerror(" e14");
+
 }
 
 GLuint surface_setup() {
+    
     surface_program = glCreateProgram();
+    
 
     reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
     reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
 
     linkprogram(surface_program);
 
-    glEnable(GL_MULTISAMPLE);
-    glEnable(GL_DEPTH_TEST);
-
+    glerror("before surface_setup");
     setup_surface(surface_program);
-
+    glerror("after surface_setup");
+    
     return surface_program;
 }
 
@@ -200,17 +225,16 @@ void update_random_field() {
     rndm_field.flushfull();
 }
 
-void update_mapscale() {
+
+void draw_field(bool inp) {
+    glUseProgram(surface_program);
+    
+    glBindVertexArray(vaos[0]);
+
     if (win_resized) {
         glUniform2fv(mapscaleLoc, 1, &mapscale[0]);
         win_resized = false;
     }
-}
-
-void draw_field(bool inp) {
-    glUseProgram(surface_program);
-    glBindVertexArray(vaos[0]);
-
 
     if (inp) update_MVP_n_send(mvpLoc);
     
@@ -231,25 +255,26 @@ GLuint grid_mvpLoc;
 void grid_setup() {
 
     grid_program = glCreateProgram();
- 
-    linkprogram(grid_program);
-    glUseProgram(grid_program);
+    
 
-
-    sur_ebo.bind();
-    rndm_field.bind();
-
-    grid_shader_grid_szLoc = glGetUniformLocation(grid_program, "grid_sz");
-    grid_mvpLoc= glGetUniformLocation(grid_program, "grid_sz");
-
-    glUniform1i(grid_shader_grid_szLoc, grid_sz);
-  
     reader.compile_shader_for("line", GL_VERTEX_SHADER, grid_program);
     reader.compile_shader_for("line", GL_FRAGMENT_SHADER, grid_program);
 
-    
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, rndm_field.id);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, rndm_field.id);
+    linkprogram(grid_program);
+
+    grid_shader_grid_szLoc = glGetUniformLocation(grid_program, "grid_sz");
+    grid_mvpLoc = glGetUniformLocation(grid_program, "MVP");
+
+
+   
+    glUseProgram(grid_program);
+    glUniform1i(grid_shader_grid_szLoc, grid_sz);
+   
+    //sur_ebo.bind();
+    //rndm_field.bind();
+    // 
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, rndm_field.id);
+    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, rndm_field.id);
     
 }
 
@@ -257,11 +282,11 @@ void grid_setup() {
 void draw_grid(bool inp) {
 
     glUseProgram(grid_program);
-
-    if (inp) update_MVP_n_send(grid_mvpLoc);
-    
     glBindVertexArray(vaos[0]);
-    glDrawElements(GL_TRIANGLE_STRIP,0,grid_sz_sq,0);
+    if (inp) update_MVP_n_send(grid_mvpLoc);
+    //glBindVertexArray(vaos[0]);
+
+    glDrawArrays(GL_TRIANGLE_STRIP,0,3);
 
 }
 

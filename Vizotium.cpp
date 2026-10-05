@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include "OpenGLSetup.h"
 
+
 GLuint surface_setup();
 void grid_setup();
 void update_mapscale();
@@ -23,7 +24,6 @@ void update_MVP_n_send(GLuint mvp_location) {
     glm::mat4 mvp = camera.update_MVP();
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
 }
-
 
 
 
@@ -52,29 +52,28 @@ int main()
 
     mat_debug = false;
 
-    GLFWwindow* window = make_window();
-    GLuint surface_program = surface_setup();
 
+    
+    GLFWwindow* window = make_window();
+
+    GLuint surface_program = surface_setup();
     grid_setup();
+    glerror("error before grid setup ");
 
     bool inp = true;
 
+    framebuffer_size_callback(window, winwidth,winheight);
 
-    framebuffer_size_callback(window, winwidth, winheight);
     while (!glfwWindowShouldClose(window))
     {
 
         Time.update();
-        
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        update_mapscale();
 
-      
-
-        draw_field(inp);
+        //draw_field(inp);
         draw_grid(inp);
         
         glfwSwapBuffers(window);

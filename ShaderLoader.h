@@ -367,7 +367,14 @@ struct ShaderReader {
         }
 
         TagWriter writer(buffer, found);
-        GLuint compiled_shader = compile_shader(type,writer.dst);
+        GLint compile_success;
+        GLuint compiled_shader = compile_shader(type,writer.dst,compile_success);
+        
+
+        if (!compile_success) {
+            std::cout << RED << "ERROR in (" << shader_name << ") (" << enitity<<
+                ") " << RESET;
+        }
 
         glAttachShader(program,compiled_shader);
 

@@ -3,51 +3,27 @@
 #include <GLFW/glfw3.h>
 #include "Camera.h"
 
-GLuint compile_shader(GLenum type, const char* src) {
+
+#define RED "\x1b[31m"
+#define RESET "\x1b[0m"
+
+GLuint compile_shader(GLenum type, const char* src,GLint &success) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
 
-    GLint success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 
     if (!success) {
         char log[1024];
         glGetShaderInfoLog(shader, 1024, nullptr, log);
-        std::cerr << log << '\n';
+        std::cerr <<RED<< log << '\n'<<RESET;
     }
 
     return shader;
 }
 
 
-
-
-GLuint create_program(const char* vs_src, const char* fs_src) {
-    GLuint vs = compile_shader(GL_VERTEX_SHADER, vs_src);
-    GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
-
-
-    GLuint prog = glCreateProgram();
-
-    glAttachShader(prog, vs);
-    glAttachShader(prog, fs);
-    glLinkProgram(prog);
-
-    GLint success;
-    glGetProgramiv(prog, GL_LINK_STATUS, &success);
-
-    if (!success) {
-        char log[1024];
-        glGetProgramInfoLog(prog, 1024, nullptr, log);
-        std::cerr << log << '\n';
-    }
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    return prog;
-}
 
 void linkprogram(GLuint prog) {
     glLinkProgram(prog);
@@ -131,6 +107,9 @@ GLFWwindow* make_window() {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_DEPTH_TEST);
+
     glViewport(0, 0, 1280, 720);
 
     return window;
@@ -149,3 +128,4 @@ GLFWwindow* make_window() {
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
 
+#define glerror(str)  std::cout <<  str << glGetError() << "\n";

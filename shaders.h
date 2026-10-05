@@ -123,7 +123,7 @@ void main() {
         coords.xy *= mapscale;
         coords.xy += offset.xy;
         gl_Position = vec4(coords,1);
-        //gl_Position.xy += offset.xy;
+
     }
     
 }
@@ -144,13 +144,18 @@ void main() {
 #version 440 core
 
 uniform int grid_sz;
-unifrom int MVP;
+uniform mat4 MVP;
 
-layout(binding = 6, std430) readonly buffer line_buffer {
+
+/*layout(binding = 6, std430) readonly buffer line_buffer {
     float height[];
 };
+*/
 
-layout(location = 5) in vec3 height;
+layout(location = 2) in float height;
+
+
+//layout(location = 5) in vec3 height;
 //uniform vec3 eye;
 //unifrom float thickness;
 
@@ -158,12 +163,19 @@ layout(location = 5) in vec3 height;
 
 void main () {
 
-    int v_id = gl_VertexID;
-    float h = height;
+    //int v_id = gl_VertexID;
+    //float h = height[v_id];
     
-    vec3 coords1 = xyzcoords(gl_VertexID, h);
+    int v = gl_VertexID;
+    int x_i = v;
+    int y_i = v / 2;
 
-    //vec3 coords2 = xyzcoords(gl_VertexID, h2);
+    float x = float(x_i) * 0.5 - 0.5;
+    float y = float(y_i) * 0.5 - 0.5;
+
+    gl_Position = MVP*vec4(x, y, 0.0, 1.0);
+  
+    //vec3 coords = xyzcoords(gl_VertexID, h2);
 
     //vec3 p1 = coords - dot(eye - coords, point);
     //vec3 p2 = coords - dot(eye - coords, point);
@@ -172,11 +184,8 @@ void main () {
     //vec3 p2 = coords ;
     
     //vec3 p12 = p2 - p1;
-    
     //p12.x = -p12.y;
-    //p12.x = p12.y;
-
-    gl_Position = vec4(coords1, 1);
+    //p12.y = p12.;
     
 
 }

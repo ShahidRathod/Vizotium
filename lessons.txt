@@ -1,0 +1,14 @@
+
+- the uniforms cant be uploaded until the program is linked and the program and cant be linked until its shaders are compiled and attached so for uploading a set of uniforms we must : 
+
+(1) glCreateProgram 
+(2) compile + attach all the shaders the program is going to use 
+(3) generate the cpu side locations : gGetUnifromLocation 
+(4) upload using glUnifrom . 
+
+
+commons mistakes : 
+
+(1) name given (the second argument) in the glGetUnifromLocation and the name written after the "uniform type" is does not match 
+(2) the type on cpu side and in the glsl script does not match
+ 
