@@ -335,8 +335,8 @@ struct ComplexNoise {
     void apply_spectral_bias() {
         for (int i = 0; i < sz; i++) {
             for (int j = 0; j < sz; j++) {
-                noise[i].real[j] *= spectral_bias[index(i, j)];
-                noise[i].imag[j] *= spectral_bias[index(i, j)];
+                noise[i].real[j] *= 0*spectral_bias[index(i, j)];
+                noise[i].imag[j] *= 0*spectral_bias[index(i, j)];
             }
         }
     }

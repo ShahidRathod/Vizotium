@@ -145,14 +145,15 @@ void main() {
 
 uniform int grid_sz;
 uniform mat4 MVP;
+uniform int nolines;
 
 
-/*layout(binding = 6, std430) readonly buffer line_buffer {
+layout(binding = 6, std430) readonly buffer line_buffer {
     float height[];
 };
-*/
 
-layout(location = 2) in float height;
+
+layout(location = 2) in float h;
 
 
 //layout(location = 5) in vec3 height;
@@ -161,33 +162,66 @@ layout(location = 2) in float height;
 
 <$xyzcoords>
 
-void main () {
+vec3 line_point(int v_id, int ins_id) {
 
-    //int v_id = gl_VertexID;
-    //float h = height[v_id];
-    
-    int v = gl_VertexID;
-    int x_i = v;
-    int y_i = v / 2;
+    int line_space = grid_sz / nolines;
 
-    float x = float(x_i) * 0.5 - 0.5;
-    float y = float(y_i) * 0.5 - 0.5;
+    int t = ins_id / (nolines);
 
-    gl_Position = MVP*vec4(x, y, 0.0, 1.0);
-  
-    //vec3 coords = xyzcoords(gl_VertexID, h2);
+    int i = v_id / 2;
+    int j = ins_id ;
 
-    //vec3 p1 = coords - dot(eye - coords, point);
-    //vec3 p2 = coords - dot(eye - coords, point);
+    int index =
+        i * (1 - t) + i * t * line_space +
+        j * t + j * (1 - t) * line_space;
+        
 
-    //vec3 p1 = coords ;
-    //vec3 p2 = coords ;
-    
-    //vec3 p12 = p2 - p1;
-    //p12.x = -p12.y;
-    //p12.y = p12.;
-    
+    int index = i + j * grid_sz;
+    return xyzcoords(v_id, height[v_is]);
+}
 
+void main() {
+
+    int v_id = gl_VertexID;
+    int ins_id = gl_InstanceID;
+
+    vec3 p1 = line_point(v_id, ins_id);
+
+    bool is_even = v_id % 2 == 0;
+
+    vec4 mvp_p1 = MVP * vec4(p1, 1);
+    mvp_p1.yz = mvp_p1.zy;
+    gl_PointSize = 20.0;
+
+    if (is_even) {
+        gl_Position = mvp_p1;
+    }
+
+    else {
+
+
+        vec4 mvp_p2 = vec4(line_point(v_id + 2, ins_id), 1);
+        mvp_p2.yz = mvp_p2.zy;
+
+        float w1 = mvp_p1[3];
+        float w2 = mvp_p2[3];
+
+        mvp_p1 /= w1;
+        mvp_p2 /= w2;
+
+
+        vec2 line = mvp_p2.xy - mvp_p1.xy;
+
+        vec2 line_up;
+
+        line_up.x = -line_up.y;
+        line_up.y = line_up.x;
+
+        mvp_p1.xy += line_up * 0.001;
+        vec4 coords = mvp_p1 * w1;
+
+        gl_Position = coords;
+    }
 }
 </vertex>
 
