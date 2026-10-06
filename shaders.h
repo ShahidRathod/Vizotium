@@ -35,14 +35,14 @@ const vec3 xyoffset = vec3(0, 0, 0);
 
 vec3 xyzcoords(int i, float h) {
     i = i % (grid_sz * grid_sz);
-    int x_i = (i % grid_sz) ;
-    int y_i = (i / grid_sz) ;
-    
+    int x_i = (i % grid_sz);
+    int y_i = (i / grid_sz);
+
     float x = x_i;
     float y = y_i;
 
     int is_even = int((x_i + y_i) % 2 != 0);
-    return vec3(x/grid_sz - 0.5, y/grid_sz - 0.5, h);
+    return vec3(x / grid_sz - 0.5, y / grid_sz - 0.5, h);
 }
 < / xyzcoords>
 
@@ -96,36 +96,55 @@ uniform mat4 MVP;
 
 out vec3 clr;
 
+
 <$viridis>
+
 <$xyzcoords>
+
+vec3 contour(vec3 c)
+{
+    float fac = 100.0;
+    float interval = 10.0;
+    float k = fac * c.z;
+
+    for (float i = -fac; i < fac; i += interval)
+    {
+        if (i-0.5 <= k && k < i + 0.5)
+            return vec3(1.0);
+    }
+
+    return c;
+}
 
 
 void main() {
-    
+
+
     int ins_id = gl_InstanceID;
-    
+
     float h = height;
     float color_h = (ins_id == 0) ? noise : height;
-    
+
     vec3 coords = xyzcoords(gl_VertexID, h);
 
     clr = color(color_h);
 
-    
-    
+
+
     if (ins_id == 2)
     {
         coords.yz = coords.zy;
-        gl_Position = MVP * vec4(coords, 1);//+ vec4(offset,1);
+        gl_Position = MVP * vec4(coords, 1);
     }
     else {
 
         coords.xy *= mapscale;
         coords.xy += offset.xy;
-        gl_Position = vec4(coords,1);
+        gl_Position = vec4(coords, 1);
+        clr = contour(clr);
 
     }
-    
+
 }
 
 < / vertex>
@@ -153,89 +172,53 @@ layout(binding = 6, std430) readonly buffer line_buffer {
 };
 
 
-layout(location = 2) in float h;
-
-
-//layout(location = 5) in vec3 height;
-//uniform vec3 eye;
-//unifrom float thickness;
 
 <$xyzcoords>
 
+
+
 vec3 line_point(int v_id, int ins_id) {
-
     int line_space = grid_sz / nolines;
-
     int t = ins_id / (nolines);
-
-    int i = v_id / 2;
-    int j = ins_id ;
-
+    int i = v_id;
+    int j = line_space*ins_id;
     int index =
-        i * (1 - t) + i * t * line_space +
-        j * t + j * (1 - t) * line_space;
-        
+        i * (1 - t) + i * t * grid_sz +
+        j * t + j * (1 - t) * grid_sz;
+    
+    //float(i + j) / (grid_sz * 2))
+    return xyzcoords(index, height[index]);
 
-    int index = i + j * grid_sz;
-    return xyzcoords(v_id, height[v_is]);
 }
 
 void main() {
 
+
     int v_id = gl_VertexID;
     int ins_id = gl_InstanceID;
 
-    vec3 p1 = line_point(v_id, ins_id);
+    vec3 coords = line_point(v_id, ins_id);
 
-    bool is_even = v_id % 2 == 0;
-
-    vec4 mvp_p1 = MVP * vec4(p1, 1);
-    mvp_p1.yz = mvp_p1.zy;
-    gl_PointSize = 20.0;
-
-    if (is_even) {
-        gl_Position = mvp_p1;
-    }
-
-    else {
+    coords.yz = coords.zy;
+    gl_PointSize = 50;
+    gl_Position = MVP * vec4(coords, 1.0);
 
 
-        vec4 mvp_p2 = vec4(line_point(v_id + 2, ins_id), 1);
-        mvp_p2.yz = mvp_p2.zy;
-
-        float w1 = mvp_p1[3];
-        float w2 = mvp_p2[3];
-
-        mvp_p1 /= w1;
-        mvp_p2 /= w2;
-
-
-        vec2 line = mvp_p2.xy - mvp_p1.xy;
-
-        vec2 line_up;
-
-        line_up.x = -line_up.y;
-        line_up.y = line_up.x;
-
-        mvp_p1.xy += line_up * 0.001;
-        vec4 coords = mvp_p1 * w1;
-
-        gl_Position = coords;
-    }
 }
-</vertex>
+< / vertex>
 
 <fragment>
 #version 440 core
+
 
 out vec4 FragColor;
 
 
 void main() {
 
-    FragColor = vec4(1, 1, 1, 1);
+    float b = 0.8;
+    FragColor = vec4(b, b, b, b);
 }
 
-</fragment>
-
+< / fragment>
 <line>

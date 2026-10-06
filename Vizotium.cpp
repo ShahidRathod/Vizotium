@@ -36,8 +36,8 @@ bool process_input(GLFWwindow* win, Camera& cam) {
         KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
         KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
 
-        KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.1f))
-        KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.1f))
+        KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.05f))
+        KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.05f))
 
         KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
         KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
@@ -53,7 +53,7 @@ int main()
     mat_debug = false;
 
 
-    
+
     GLFWwindow* window = make_window();
 
     GLuint surface_program = surface_setup();
@@ -62,7 +62,7 @@ int main()
 
     bool inp = true;
 
-    framebuffer_size_callback(window, winwidth,winheight);
+    framebuffer_size_callback(window, winwidth, winheight);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -70,12 +70,13 @@ int main()
         Time.update();
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-        //draw_field(inp);
+        draw_field(inp);
         draw_grid(inp);
-        
+
         glfwSwapBuffers(window);
         glfwPollEvents();
         inp = process_input(window, camera);

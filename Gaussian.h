@@ -310,7 +310,7 @@ struct ComplexNoise {
                 double dis = sqre(z - i - 1) + sqre(z - j - 1);
                 double scaled_dis = dis / (double)(z * z);
 
-                constexpr double spec_radii = 0.0001;
+                constexpr double spec_radii = 0.00005;
                 double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 2), -0.5);
                 //double val = (i == j == z - 1) ? 1 : 0.1;
 
@@ -335,8 +335,8 @@ struct ComplexNoise {
     void apply_spectral_bias() {
         for (int i = 0; i < sz; i++) {
             for (int j = 0; j < sz; j++) {
-                noise[i].real[j] *= 0*spectral_bias[index(i, j)];
-                noise[i].imag[j] *= 0*spectral_bias[index(i, j)];
+                noise[i].real[j] *= spectral_bias[index(i, j)];
+                noise[i].imag[j] *= spectral_bias[index(i, j)];
             }
         }
     }

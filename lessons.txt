@@ -11,4 +11,10 @@ commons mistakes :
 
 (1) name given (the second argument) in the glGetUnifromLocation and the name written after the "uniform type" is does not match 
 (2) the type on cpu side and in the glsl script does not match
- 
+
+
+- [6/10/2026]
+
+Forgetting to unchanged the geometry.
+
+for sake of simplicity I made the spectral bias zero that would give us zero height but I forgot to unchange and that left miserable . thought that the rendering side is broken again.
