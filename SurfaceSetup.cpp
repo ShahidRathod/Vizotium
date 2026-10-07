@@ -207,6 +207,9 @@ void update_random_field() {
     noise.make_new_field();
     noise.output_grayscale(rndm_field_mem);
     noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
+
+    //memset(rndm_field_mem, 0.f, grid_sz_sq * sizeof(float));
+
     GLenum type = glClientWaitSync(draw_done, 0, (int)1e4);
 
     switch (type)
@@ -253,7 +256,7 @@ GLuint grid_shader_grid_szLoc;
 GLuint grid_mvpLoc;
 GLuint nolinesLoc;
 
-int nolines = 16;
+int nolines = grid_sz/2;
 void grid_setup() {
 
     grid_program = glCreateProgram();
@@ -287,8 +290,8 @@ void draw_grid(bool inp) {
 
     glDrawArraysInstanced(
         GL_TRIANGLE_STRIP,
-        0,2*(grid_sz-2),
-         nolines);
+        0,2*(grid_sz-1),
+         2*nolines);
 
 
 }

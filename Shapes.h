@@ -24,7 +24,8 @@ template <int coords_n> struct Vector {
 	VectorEbo <coords_n> ebo;
 
 	template <Vertex arr>
-	inline void assign_circle_coords(int i, float angle, float x_val) {
+	
+	void assign_circle_coords(int i, float angle, float x_val) {
 		arr[i].Z = sin(angle);
 		arr[i].Y = cos(angle);
 		arr[i].X = x_val;

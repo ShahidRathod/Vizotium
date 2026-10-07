@@ -198,7 +198,7 @@ void main() {
     int ins_id = gl_InstanceID;
 
     vec3 p1 = line_point(v_id, ins_id);
-    //p1.yz = p1.zy;
+    p1.yz = p1.zy;
 
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
     
@@ -211,7 +211,7 @@ void main() {
     }
     else {
         vec3 p2 = line_point(v_id + 2, ins_id);
-        //p2.yz = p2.zy;
+        p2.yz = p2.zy;
 
         vec4 p2_mvp = MVP * vec4(p2, 1.0);
 
@@ -222,15 +222,15 @@ void main() {
         p2_mvp /= w2;
 
         vec2 line = p2_mvp.xy - p1_mvp.xy;
-
         vec2 line_p;
         
         line_p.x = -line.y;
         line_p.y = line.x;
 
-        p2_mvp.xy += 0.2*line_p;
+        line_p = normalize(line_p) / (5*grid_sz);
 
-        gl_Position = p2_mvp;
+        p1_mvp.xy += line_p;
+        gl_Position = p1_mvp;
     }
 
 }
