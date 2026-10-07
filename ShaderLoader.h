@@ -180,6 +180,7 @@ struct ShaderReader {
 
     char get_nxt() {
         int c = buffer[char_no];
+        buffer + char_no;
         cursr = (char)c;
         if (delim_tkn.compare_str(R"(\\)", 2)) at_comnt = true;
         if (cursr == '\n') {
@@ -302,7 +303,10 @@ struct ShaderReader {
     }
 
     void loop() {
-        while ((cursr != '<' && !at_comnt) && cursr != '\0') get_nxt();
+        while ((cursr != '<' && !at_comnt) && cursr != '\0')
+        {
+            get_nxt();
+        }
     }
 
     void content_loop() {
@@ -336,16 +340,24 @@ struct ShaderReader {
 
     ShaderReader(const char* file_name) {
         file = open_file(file_name);
+        int len = 0;
+
+        while (fgetc(file) != EOF) { len++; }
+
         fseek(file, 0, SEEK_END);
-        file_sz = ftell(file) - 1;
+        file_sz = ftell(file) ;
+        
         fseek(file, 0, SEEK_SET);
+    
+        std::cout << file_sz - len;
         if (file_sz >= b_sz) RAISE_INSUFFICIENT_SPACE;
 
-        fread(buffer, sizeof(char), file_sz, file);
+        fread(buffer, sizeof(char), len, file);
         fclose(file);
+
         strcpy(currnt_tag->tag_name, file_name);
         currnt_tag->append_hash_lnk();
-
+        buffer[len] = '\0';
         get_nxt();
         content_loop();
     }
@@ -391,8 +403,8 @@ struct ShaderReader {
 };
 
 
-constexpr int shader_file_sz = 7000;
-constexpr int max_tags = 64;
+constexpr int shader_file_sz = 8000;
+constexpr int max_tags = 74;
 
 ShaderReader<shader_file_sz, max_tags> reader("shaders.h");
 
