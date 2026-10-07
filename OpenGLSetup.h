@@ -109,8 +109,8 @@ GLFWwindow* make_window() {
 
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
+
+
     glViewport(0, 0, 1280, 720);
 
     return window;

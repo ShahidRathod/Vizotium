@@ -240,6 +240,10 @@ void draw_field(bool inp) {
     }
 
     if (inp) update_MVP_n_send(mvpLoc);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 1.0f);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glDrawElementsInstanced(
         GL_TRIANGLE_STRIP,
@@ -248,6 +252,7 @@ void draw_field(bool inp) {
         nullptr,
         3);
 
+    glDisable(GL_POLYGON_OFFSET_FILL);
     draw_done = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
 

@@ -187,7 +187,7 @@ vec3 line_point(int v_id, int ins_id) {
         j * t + j * (1 - t) * grid_sz;
     
     //float(i + j) / (grid_sz * 2))
-    return xyzcoords(index, height[index]);
+    return xyzcoords(index, height[index] +0.0005);
 
 }
 
@@ -198,8 +198,8 @@ void main() {
     int ins_id = gl_InstanceID;
 
     vec3 p1 = line_point(v_id, ins_id);
+    
     p1.yz = p1.zy;
-
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
     
     bool is_even = v_id % 2 == 0;

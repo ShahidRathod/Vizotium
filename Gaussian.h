@@ -311,7 +311,7 @@ struct ComplexNoise {
                 double scaled_dis = dis / (double)(z * z);
 
                 constexpr double spec_radii = 0.00001;
-                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 1), -1);
+                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 0.8), -1.2);
                 //double val = (i == j == z - 1) ? 1 : 0.1;
 
                 set_vals(spectral_bias, (float)val,
