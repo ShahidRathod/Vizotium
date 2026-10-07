@@ -27,7 +27,7 @@ vec3 color(float h)
 
     return clamp(c0 + h * (c1 + h * (c2 + h * (c3 + h * c4))), 0.0, 1.0);
 }
-< / viridis>
+</viridis>
 
 const vec3 xyoffset = vec3(0, 0, 0);
 
@@ -147,14 +147,14 @@ void main() {
 
 }
 
-< / vertex>
+</   vertex>
 
 <fragment>
 <$heightmap:fragment>
 
 
-< / fragment>
-< / surface>
+</fragment>
+</surface>
 
 
 <line>
@@ -180,7 +180,7 @@ layout(binding = 6, std430) readonly buffer line_buffer {
 vec3 line_point(int v_id, int ins_id) {
     int line_space = grid_sz / nolines;
     int t = ins_id / (nolines);
-    int i = v_id;
+    int i = v_id/2;
     int j = line_space*ins_id;
     int index =
         i * (1 - t) + i * t * grid_sz +
@@ -197,15 +197,45 @@ void main() {
     int v_id = gl_VertexID;
     int ins_id = gl_InstanceID;
 
-    vec3 coords = line_point(v_id, ins_id);
+    vec3 p1 = line_point(v_id, ins_id);
+    //p1.yz = p1.zy;
 
-    coords.yz = coords.zy;
+    vec4 p1_mvp = MVP * vec4(p1, 1.0);
+    
+    bool is_even = v_id % 2 == 0;
+
     gl_PointSize = 50;
-    gl_Position = MVP * vec4(coords, 1.0);
 
+    if (is_even) {
+        gl_Position = p1_mvp;
+    }
+    else {
+        vec3 p2 = line_point(v_id + 2, ins_id);
+        //p2.yz = p2.zy;
+
+        vec4 p2_mvp = MVP * vec4(p2, 1.0);
+
+        float w1 = p1_mvp[3];
+        float w2 = p2_mvp[3];
+
+        p1_mvp /= w1;
+        p2_mvp /= w2;
+
+        vec2 line = p2_mvp.xy - p1_mvp.xy;
+
+        vec2 line_p;
+        
+        line_p.x = -line.y;
+        line_p.y = line.x;
+
+        p2_mvp.xy += 0.2*line_p;
+
+        gl_Position = p2_mvp;
+    }
 
 }
-< / vertex>
+
+</  vertex>
 
 <fragment>
 #version 440 core
@@ -216,9 +246,10 @@ out vec4 FragColor;
 
 void main() {
 
-    float b = 0.8;
+    float b = 1;
     FragColor = vec4(b, b, b, b);
 }
 
 < / fragment>
-<line>
+
+< /line>

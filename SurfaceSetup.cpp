@@ -286,9 +286,9 @@ void draw_grid(bool inp) {
     if (inp) update_MVP_n_send(grid_mvpLoc);
 
     glDrawArraysInstanced(
-        GL_LINE_STRIP,
-        0,grid_sz-1,
-         2*nolines);
+        GL_TRIANGLE_STRIP,
+        0,2*(grid_sz-2),
+         nolines);
 
 
 }
