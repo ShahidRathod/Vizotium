@@ -262,6 +262,7 @@ GLuint grid_mvpLoc;
 GLuint nolinesLoc;
 
 int nolines = grid_sz/3;
+
 void grid_setup() {
 
     grid_program = glCreateProgram();

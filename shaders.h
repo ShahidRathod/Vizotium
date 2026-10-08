@@ -27,6 +27,7 @@ vec3 color(float h)
 
     return clamp(c0 + h * (c1 + h * (c2 + h * (c3 + h * c4))), 0.0, 1.0);
 }
+
 </viridis>
 
 const vec3 xyoffset = vec3(0, 0, 0);
@@ -127,6 +128,7 @@ void main() {
 
     vec3 coords = xyzcoords(gl_VertexID, h);
 
+    if (ins_id == 0) color_h = pow(color_h, 0.11f);
     clr = color(color_h);
 
 
@@ -142,8 +144,8 @@ void main() {
         coords.xy *= mapscale;
         coords.xy += offset.xy;
         gl_Position = vec4(coords, 1);
-        clr = contour(clr);
-
+        if (ins_id == 1) clr = contour(clr);
+         
     }
 
 }
@@ -268,7 +270,7 @@ in vec3 clr;
 void main() {
 
     float b = 1;
-    FragColor = vec4(clr*0.85, b);
+    FragColor = vec4(clr*0.75, b);
 }
 
 < / fragment>

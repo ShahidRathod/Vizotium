@@ -52,6 +52,8 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     winwidth = float(width);
     winheight = float(height);
 
+    camera.mouse_x_centre = winwidth / 2;
+    camera.mouse_y_centre = winheight / 2;
 
     camera.aspect = winwidth / winheight;
 
@@ -61,6 +63,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 }
 
 extern bool inp;
+
 void mouse_callback(GLFWwindow*, double x, double y) {
     camera.calibrate_eye(x, y);
     inp = true;
@@ -125,12 +128,12 @@ GLFWwindow* make_window() {
 
 #define KEY_FUNC_HLPR(key, func)                      \
     (glfwGetKey(win, GLFW_KEY_##key) == GLFW_PRESS) { \
-        key_press = true;                             \
+        inp = true;                             \
         func;                                         \
         cout << #key;                                 \
     }
 
-#define KEY_FUNC_ELSE_IF(key, func) else if KEY_FUNC_HLPR (key, func)
+#define KEY_FUNC_ELSE_IF(key, func) if KEY_FUNC_HLPR (key, func)
 #define KEY_FUNC_IF(key, func) if KEY_FUNC_HLPR (key, func)
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"

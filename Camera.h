@@ -4,10 +4,12 @@
 #include <iostream>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 inline bool mat_debug = true;
 
@@ -62,17 +64,31 @@ struct Camera {
 
     glm::vec3 free_position;
     glm::vec3 free_eye;
+    glm::vec3 free_eye_p;
 
-    glm::vec2 mouse_pos;
+    float eye_yaw;
+    float eye_pitch;
+
+    float mouse_x;
+    float mouse_y;
+
+    float dx, dy;
+
+    float mouse_x_centre;
+    float mouse_y_centre;
 
     Camera() {
+
         yaw = 0.1;
         pitch = 60;
         scale = 1;
-        free_position = glm::vec3(1,1,0.5);
-        free_eye = glm::vec3(0, 0, 0);
+        free_position = glm::vec3(1,1,1);
 
-        mouse_pos = glm::vec2(0);
+        free_eye = glm::vec3(1,0, 0);
+        free_eye_p = glm::vec3(0, 0, 1);
+
+        eye_yaw = eye_pitch = mouse_x = mouse_y = 0;
+
     }
 
     inline void limit_angle(float& angle, float lower, float upper) {
@@ -98,6 +114,7 @@ struct Camera {
     inline float give_scale() { return std::exp(scale); }
 
     glm::mat4 model() {
+        
         glm::mat4 model(1.0f);
 
         model = glm::rotate(model, RAD(yaw), Z_AXIS_VEC3);
@@ -142,7 +159,7 @@ struct Camera {
 
     glm::mat4 update_MVP() {
 
-        glm::mat4 mvp = ( perspective()*view());
+        glm::mat4 mvp =  perspective()*view();
         //mvp= glm::translate(mvp,*surface_offset);
         std::cout << "\nscale: " << scale;
         DEBUG_MATRIX(mvp);
@@ -150,42 +167,74 @@ struct Camera {
     }
 
     glm::mat4 free_look() {
+
         glm::mat4 view(1);
         glm::translate(view, free_position);
-        view *= glm::lookAt(free_position, free_eye, glm::vec3(0, 1, 0));
+
+        view *= glm::lookAt(free_position, free_position-free_eye, glm::vec3(0, 1, 0));
 
         return perspective() * view;
     }
 
     void inc_free_x(float val) {
-        free_position.x +=val;
-        free_eye.x += val;
-        std::cout <<"\nx inc: " << free_position.x;
+        free_position += val * free_eye;
     }
-    void inc_free_y(float val) {
-        free_position.y += val;
-        free_eye.y += val;
-        std::cout << "\ny inc: " << free_position.y;
+    void inc_free_z(float val) {
+        free_position += val * free_eye_p;
     }
 
-    void inc_free_z(float val) {
-        free_position.z += val;
-        free_eye.z += val;
-        std::cout << "\nz inc: " << free_position.z;
+    void inc_free_y(float val) {
+        free_position.y += val;
+    }
+
+
+    glm::vec3  apply_mouse_rotation(glm::vec3 & eye,glm::vec3 axis2) {
+        
+        eye = glm::rotate(eye, RAD(eye_yaw), -Y_AXIS_VEC3);
+        
+        glm::vec3 rotated_z = glm::rotate(Z_AXIS_VEC3, RAD(eye_yaw), -Y_AXIS_VEC3);
+        eye = glm::rotate(eye, RAD(eye_pitch), rotated_z);
+
+        return eye;
     }
 
     void calibrate_eye(float x,float y) {
 
-        glm::vec2 mouse_now = glm::vec2(x, y);
-        glm::vec2 d_mouse = mouse_now - mouse_pos;
-        mouse_pos = mouse_now;
+        dx = (x-mouse_x)/4;
+        dy = (y-mouse_y)/4;
 
-        free_eye += d_mouse.x * -glm::vec3(-free_eye.z, free_eye.y, free_eye.x);
-        free_eye += d_mouse.y * -glm::vec3(-free_eye.z, -free_eye.x, free_eye.y);
+        mouse_x = x;
+        mouse_y = y;
+
+        eye_yaw += dx;
+        eye_pitch += dy;
+
+        glm::vec3 base_eye(1, 0, 0);
+
+        glm::vec3 base_eye_p(0, 0, 1);
+
         
+        free_eye = apply_mouse_rotation(base_eye,Z_AXIS_VEC3);
+        free_eye_p = apply_mouse_rotation(base_eye_p,Z_AXIS_VEC3);
 
-        std::cout << "eye calibrated d mouse: " << d_mouse.x << " , " << d_mouse.y<<"\n";
 
+        /*print_vec(free_eye);
+        print_vec(free_eye_p);
+        */
     }
 
+    void debug_eye_angles() {
+
+     /*  std::cout << "\neye_yaw: " << eye_yaw << "  eye_pitch: " << eye_pitch
+            << "\ndx: " << dx << "  dy: " << dy << "\n\n"
+            << "\n mouse_x:  " << mouse_x << "mouse_y:  " << mouse_y
+            << "\n mouse_x_c:  " << mouse_x_centre << "mouse_y_c:  " << mouse_y_centre;*/
+    }
+
+    void no_input() {
+        //mouse_x = mouse_x_centre;
+        //mouse_y = mouse_y_centre;
+    }
 };
+
+
