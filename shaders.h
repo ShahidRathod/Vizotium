@@ -42,7 +42,7 @@ vec3 xyzcoords(int i, float h) {
     float y = y_i;
 
     int is_even = int((x_i + y_i) % 2 != 0);
-    return vec3(x / grid_sz - 0.5, y / grid_sz - 0.5, h);
+    return vec3(x / grid_sz - 0.5, y / grid_sz - 0.5, h-0.35);
 }
 < / xyzcoords>
 
@@ -135,6 +135,7 @@ void main() {
     {
         coords.yz = coords.zy;
         gl_Position = MVP * vec4(coords, 1);
+
     }
     else {
 
@@ -166,15 +167,30 @@ uniform int grid_sz;
 uniform mat4 MVP;
 uniform int nolines;
 
+layout(location = 3) in float height_clr;
 
 layout(binding = 6, std430) readonly buffer line_buffer {
     float height[];
 };
 
+out vec3 clr;
 
 
 <$xyzcoords>
 
+<$viridis>
+
+int index(int v_id, int ins_id) {
+    int line_space = grid_sz / nolines;
+    int t = ins_id / (nolines);
+    int i = v_id / 2;
+    int j = line_space * ins_id;
+    int index =
+        i * (1 - t) + i * t * grid_sz +
+        j * t + j * (1 - t) * grid_sz;
+
+    return index;
+}
 
 
 vec3 line_point(int v_id, int ins_id) {
@@ -187,7 +203,7 @@ vec3 line_point(int v_id, int ins_id) {
         j * t + j * (1 - t) * grid_sz;
     
     //float(i + j) / (grid_sz * 2))
-    return xyzcoords(index, height[index] +0.0005);
+    return xyzcoords(index, height[index]);
 
 }
 
@@ -197,6 +213,8 @@ void main() {
     int v_id = gl_VertexID;
     int ins_id = gl_InstanceID;
 
+    int p1_index = index(v_id, ins_id);
+
     vec3 p1 = line_point(v_id, ins_id);
     
     p1.yz = p1.zy;
@@ -204,10 +222,12 @@ void main() {
     
     bool is_even = v_id % 2 == 0;
 
-    gl_PointSize = 50;
+   
+    clr = color(height[p1_index]);
 
     if (is_even) {
         gl_Position = p1_mvp;
+        
     }
     else {
         vec3 p2 = line_point(v_id + 2, ins_id);
@@ -227,7 +247,7 @@ void main() {
         line_p.x = -line.y;
         line_p.y = line.x;
 
-        line_p = normalize(line_p) / (5*grid_sz);
+        line_p = normalize(line_p) / (2*grid_sz);
 
         p1_mvp.xy += line_p;
         gl_Position = p1_mvp;
@@ -243,11 +263,12 @@ void main() {
 
 out vec4 FragColor;
 
+in vec3 clr;
 
 void main() {
 
     float b = 1;
-    FragColor = vec4(b, b, b, b);
+    FragColor = vec4(clr*0.85, b);
 }
 
 < / fragment>

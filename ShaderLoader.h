@@ -403,8 +403,8 @@ struct ShaderReader {
 };
 
 
-constexpr int shader_file_sz = 8000;
-constexpr int max_tags = 74;
+constexpr int shader_file_sz = 5000;
+constexpr int max_tags = 64;
 
 ShaderReader<shader_file_sz, max_tags> reader("shaders.h");
 

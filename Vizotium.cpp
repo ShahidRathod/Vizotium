@@ -21,7 +21,7 @@ using std::cout, std::cerr;
 
 
 void update_MVP_n_send(GLuint mvp_location) {
-    glm::mat4 mvp = camera.update_MVP();
+    glm::mat4 mvp = camera.free_look();
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
 }
 
@@ -31,10 +31,20 @@ bool process_input(GLFWwindow* win, Camera& cam) {
     bool key_press = false;
     KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
         KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
-        KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
+
+        /*KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
         KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
         KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
         KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
+        */
+
+        KEY_FUNC_ELSE_IF(D, cam.inc_free_x(.01))
+        KEY_FUNC_ELSE_IF(A, cam.inc_free_x(-.01))
+        KEY_FUNC_ELSE_IF(W, cam.inc_free_z(.01))
+        KEY_FUNC_ELSE_IF(S, cam.inc_free_z(-.01))
+
+        KEY_FUNC_ELSE_IF(SPACE, cam.inc_free_y(.01))
+        KEY_FUNC_ELSE_IF(LEFT_ALT, cam.inc_free_y(-.01))
 
         KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.05f))
         KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.05f))
@@ -46,13 +56,11 @@ bool process_input(GLFWwindow* win, Camera& cam) {
         return key_press;
 }
 
+bool inp;
 
-int main()
-{
+int main() {
 
     mat_debug = false;
-
-
 
     GLFWwindow* window = make_window();
 
@@ -60,10 +68,11 @@ int main()
     grid_setup();
     glerror("error before grid setup ");
 
-    bool inp = true;
+    
 
     framebuffer_size_callback(window, winwidth, winheight);
 
+    inp = true;
     while (!glfwWindowShouldClose(window))
     {
 
@@ -80,6 +89,7 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
         inp = process_input(window, camera);
+
 
     }
 

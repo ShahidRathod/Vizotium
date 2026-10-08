@@ -60,10 +60,19 @@ struct Camera {
     float aspect = 1280.0f / 720.0f;
     glm::vec3 offset{ .2f };
 
+    glm::vec3 free_position;
+    glm::vec3 free_eye;
+
+    glm::vec2 mouse_pos;
+
     Camera() {
         yaw = 0.1;
         pitch = 60;
         scale = 1;
+        free_position = glm::vec3(1,1,0.5);
+        free_eye = glm::vec3(0, 0, 0);
+
+        mouse_pos = glm::vec2(0);
     }
 
     inline void limit_angle(float& angle, float lower, float upper) {
@@ -133,10 +142,50 @@ struct Camera {
 
     glm::mat4 update_MVP() {
 
-       
         glm::mat4 mvp = ( perspective()*view());
         //mvp= glm::translate(mvp,*surface_offset);
+        std::cout << "\nscale: " << scale;
         DEBUG_MATRIX(mvp);
         return mvp;
     }
+
+    glm::mat4 free_look() {
+        glm::mat4 view(1);
+        glm::translate(view, free_position);
+        view *= glm::lookAt(free_position, free_eye, glm::vec3(0, 1, 0));
+
+        return perspective() * view;
+    }
+
+    void inc_free_x(float val) {
+        free_position.x +=val;
+        free_eye.x += val;
+        std::cout <<"\nx inc: " << free_position.x;
+    }
+    void inc_free_y(float val) {
+        free_position.y += val;
+        free_eye.y += val;
+        std::cout << "\ny inc: " << free_position.y;
+    }
+
+    void inc_free_z(float val) {
+        free_position.z += val;
+        free_eye.z += val;
+        std::cout << "\nz inc: " << free_position.z;
+    }
+
+    void calibrate_eye(float x,float y) {
+
+        glm::vec2 mouse_now = glm::vec2(x, y);
+        glm::vec2 d_mouse = mouse_now - mouse_pos;
+        mouse_pos = mouse_now;
+
+        free_eye += d_mouse.x * -glm::vec3(-free_eye.z, free_eye.y, free_eye.x);
+        free_eye += d_mouse.y * -glm::vec3(-free_eye.z, -free_eye.x, free_eye.y);
+        
+
+        std::cout << "eye calibrated d mouse: " << d_mouse.x << " , " << d_mouse.y<<"\n";
+
+    }
+
 };

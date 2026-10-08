@@ -60,6 +60,12 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     win_resized = true;
 }
 
+extern bool inp;
+void mouse_callback(GLFWwindow*, double x, double y) {
+    camera.calibrate_eye(x, y);
+    inp = true;
+}
+
 
 struct TimeObj {
     float time = 0.0;
@@ -106,7 +112,7 @@ GLFWwindow* make_window() {
     }
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    glfwSetCursorPosCallback(window, mouse_callback);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
 

@@ -261,7 +261,7 @@ GLuint grid_shader_grid_szLoc;
 GLuint grid_mvpLoc;
 GLuint nolinesLoc;
 
-int nolines = grid_sz/2;
+int nolines = grid_sz/3;
 void grid_setup() {
 
     grid_program = glCreateProgram();
@@ -291,8 +291,11 @@ void draw_grid(bool inp) {
 
     glUseProgram(grid_program);
 
-    if (inp) update_MVP_n_send(grid_mvpLoc);
+    if (inp) {
+        update_MVP_n_send(grid_mvpLoc);
+    }
 
+    glBindVertexArray(vaos[0]);
     glDrawArraysInstanced(
         GL_TRIANGLE_STRIP,
         0,2*(grid_sz-1),
