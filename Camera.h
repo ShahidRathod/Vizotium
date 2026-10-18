@@ -56,16 +56,19 @@ template <typename T> int sgn(T val) {
 
 extern glm::vec3* surface_offset;
 
+
 struct Camera {
     float yaw = 90.f;
     float pitch = 0.1f;
     float scale = 0;
 
-    float fov = 55.0f;
+    float fov = 70.0f;
     float aspect = 1280.0f / 720.0f;
     glm::vec3 offset{ .2f };
 
-    glm::vec3 free_position;
+    glm::vec3 free_pos;
+    glm::vec3 free_velct;
+
     glm::vec3 free_eye;
     glm::vec3 free_eye_p;
 
@@ -85,7 +88,7 @@ struct Camera {
         yaw = 0.1;
         pitch = 60;
         scale = 1;
-        free_position = glm::vec3(1,1,1);
+        free_pos = glm::vec3(1,1,1);
 
         free_eye = glm::vec3(1,0, 0);
         free_eye_p = glm::vec3(0, 0, 1);
@@ -176,27 +179,33 @@ struct Camera {
 
       
         int upsign = sgn(cos(RAD(eye_pitch)));
-        view *= glm::lookAt(free_position, free_position-free_eye, glm::vec3(0, upsign, 0));
+        view *= glm::lookAt(free_pos, free_pos-free_eye, glm::vec3(0, upsign, 0));
 
         return perspective() * view;
     }
 
-    void inc_free_x(float val) {
-        free_position += val * free_eye;
-    }
-    void inc_free_z(float val) {
-        free_position += val * free_eye_p;
-    }
 
-    void inc_free_y(float val) {
-        free_position.y += val;
+    bool update_camera(glm::vec3& acc, float acc_limit) {
+        glm::vec3 dirtn[3] = { free_eye, Y_AXIS_VEC3, free_eye_p };
+        bool moving = false;
+
+        for (int i = 0; i < 3; i++) {
+            float lo = free_velct[i] > 0.f ? 0.f : -acc_limit;
+            float hi = free_velct[i] < 0.f ? 0.f : acc_limit;
+            free_velct[i] = glm::clamp(free_velct[i] + acc[i], lo, hi);
+
+            if (free_velct[i] != 0.f) {
+                free_pos += free_velct[i] * dirtn[i];
+                moving = true;
+            }
+        }
+        return moving;
     }
 
 
     glm::vec3  apply_mouse_rotation(glm::vec3 & eye,glm::vec3 axis2) {
         
         eye = glm::rotate(eye, RAD(eye_yaw), -Y_AXIS_VEC3);
-        
         glm::vec3 rotated_z = glm::rotate(Z_AXIS_VEC3, RAD(eye_yaw), -Y_AXIS_VEC3);
         eye = glm::rotate(eye, RAD(eye_pitch), rotated_z);
 

@@ -320,7 +320,7 @@ bool camera_close_surface(glm::vec3& cam_pos) {
     glm::vec3 pos = cam_pos;
     pos.y -= 0.05f;
 
-    constexpr float skin = 0.001f;
+    constexpr float skin = 0.0001f;
 
     auto bound = [](float x) { return -0.5f <= x && x <= 0.5f; };
     auto to_grid = [](float x, int sz) { return (int)((x + 0.5f) * sz); };
@@ -343,7 +343,7 @@ bool camera_close_surface(glm::vec3& cam_pos) {
     const glm::vec3 cell_origin(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
     const glm::vec3 relative = pos - cell_origin;
     const float distance = glm::dot(normal, relative) ;
-    std::cout << "\ndistance" << distance;
+
     if (distance - skin < 0.0f)
         cam_pos -= normal * distance;
 

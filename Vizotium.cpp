@@ -32,11 +32,14 @@ bool inp;
 
 
 
-constexpr float move_v = 0.01;
+constexpr float move_v = 0.0005;
+constexpr float v_limit = 0.01;
+
+glm::vec3 acceleration = { 0.f, 0.f, 0.f };
 
 void process_input(GLFWwindow* win, Camera& cam) {
 
-   
+    acceleration = glm::vec3(0.f);
 
         KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
             KEY_FUNC_IF(DOWN, cam.scale_inc(-0.01f))
@@ -47,24 +50,28 @@ void process_input(GLFWwindow* win, Camera& cam) {
             KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
             */
 
+            KEY_FUNC_IF(A, acceleration.z = +move_v)
+            KEY_FUNC_ELSE_IF(D, acceleration.z = -move_v)
+            else acceleration.z = -glm::sign(cam.free_velct.z) * move_v;
 
-            KEY_FUNC_IF(D, cam.inc_free_z(-move_v))
-            KEY_FUNC_IF(A, cam.inc_free_z(move_v))
+            KEY_FUNC_IF(W, acceleration.x = -move_v)
+            KEY_FUNC_ELSE_IF(S, acceleration.x = +move_v)
+            else acceleration.x = -glm::sign(cam.free_velct.x) * move_v;
 
-            KEY_FUNC_IF(W, cam.inc_free_x(-move_v))
-            KEY_FUNC_IF(S, cam.inc_free_x(move_v))
-
-            KEY_FUNC_IF(SPACE, cam.inc_free_y(.01))
-            KEY_FUNC_IF(LEFT_ALT, cam.inc_free_y(-.01))
+            KEY_FUNC_IF(SPACE, acceleration.y = +move_v)
+            KEY_FUNC_ELSE_IF(LEFT_ALT, acceleration.y = -move_v)
+            else acceleration.y = -glm::sign(cam.free_velct.y) * move_v;
 
             KEY_FUNC_IF(8, cam.scale_inc(0.05f))
             KEY_FUNC_IF(2, cam.scale_inc(-0.05f))
-            
-       
+
+
         KEY_FUNC_IF(END, glfwSetWindowShouldClose(win, true))
         KEY_FUNC_IF(SPACE, Time.stop_start())
         KEY_FUNC_IF(ENTER, update_rndm_field())
-        camera_close_surface(cam.free_position);
+
+        inp = cam.update_camera(acceleration, v_limit) || inp;
+        camera_close_surface(cam.free_pos);
 }
 
 int main() {
@@ -108,6 +115,8 @@ int main() {
         else {
             camera.no_input();
         }
+
+        inp = false;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
