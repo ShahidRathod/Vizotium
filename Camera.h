@@ -10,6 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <limits>
+
+float min_float = std::numeric_limits<float>::min();
 
 inline bool mat_debug = true;
 
@@ -127,7 +130,7 @@ struct Camera {
 
     glm::mat4 perspective() {
 
-        glm::mat4 pers = glm::perspective(RAD(fov), aspect, 0.01f, 25.0f);
+        glm::mat4 pers = glm::perspective(RAD(fov), aspect, 0.001f, 25.0f);
         DEBUG_MATRIX(pers);
         return pers;
     }
@@ -169,9 +172,11 @@ struct Camera {
     glm::mat4 free_look() {
 
         glm::mat4 view(1);
-        glm::translate(view, free_position);
+        //glm::translate(view, free_position);
 
-        view *= glm::lookAt(free_position, free_position-free_eye, glm::vec3(0, 1, 0));
+      
+        int upsign = sgn(cos(RAD(eye_pitch)));
+        view *= glm::lookAt(free_position, free_position-free_eye, glm::vec3(0, upsign, 0));
 
         return perspective() * view;
     }
@@ -225,10 +230,10 @@ struct Camera {
 
     void debug_eye_angles() {
 
-     /*  std::cout << "\neye_yaw: " << eye_yaw << "  eye_pitch: " << eye_pitch
+       std::cout << "\neye_yaw: " << eye_yaw << "  eye_pitch: " << eye_pitch
             << "\ndx: " << dx << "  dy: " << dy << "\n\n"
             << "\n mouse_x:  " << mouse_x << "mouse_y:  " << mouse_y
-            << "\n mouse_x_c:  " << mouse_x_centre << "mouse_y_c:  " << mouse_y_centre;*/
+            << "\n mouse_x_c:  " << mouse_x_centre << "mouse_y_c:  " << mouse_y_centre;
     }
 
     void no_input() {

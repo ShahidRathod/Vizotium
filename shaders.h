@@ -43,7 +43,7 @@ vec3 xyzcoords(int i, float h) {
     float y = y_i;
 
     int is_even = int((x_i + y_i) % 2 != 0);
-    return vec3(x / grid_sz - 0.5, y / grid_sz - 0.5, h-0.35);
+    return vec3(x / grid_sz - 0.5, y / grid_sz - 0.5, h);
 }
 < / xyzcoords>
 
@@ -143,6 +143,7 @@ void main() {
 
         coords.xy *= mapscale;
         coords.xy += offset.xy;
+        coords.z = -1; // map is always closer than 3d surface 
         gl_Position = vec4(coords, 1);
         if (ins_id == 1) clr = contour(clr);
          
@@ -196,16 +197,8 @@ int index(int v_id, int ins_id) {
 
 
 vec3 line_point(int v_id, int ins_id) {
-    int line_space = grid_sz / nolines;
-    int t = ins_id / (nolines);
-    int i = v_id/2;
-    int j = line_space*ins_id;
-    int index =
-        i * (1 - t) + i * t * grid_sz +
-        j * t + j * (1 - t) * grid_sz;
-    
-    //float(i + j) / (grid_sz * 2))
-    return xyzcoords(index, height[index]);
+    int indx = index(v_id, ins_id);
+    return xyzcoords(indx, height[indx] );
 
 }
 
@@ -216,7 +209,6 @@ void main() {
     int ins_id = gl_InstanceID;
 
     int p1_index = index(v_id, ins_id);
-
     vec3 p1 = line_point(v_id, ins_id);
     
     p1.yz = p1.zy;
@@ -228,8 +220,7 @@ void main() {
     clr = color(height[p1_index]);
 
     if (is_even) {
-        gl_Position = p1_mvp;
-        
+        gl_Position = p1_mvp;   
     }
     else {
         vec3 p2 = line_point(v_id + 2, ins_id);
@@ -240,16 +231,13 @@ void main() {
         float w1 = p1_mvp[3];
         float w2 = p2_mvp[3];
 
-        p1_mvp /= w1;
-        p2_mvp /= w2;
-
         vec2 line = p2_mvp.xy - p1_mvp.xy;
         vec2 line_p;
         
         line_p.x = -line.y;
         line_p.y = line.x;
-
-        line_p = normalize(line_p) / (2*grid_sz);
+        
+        line_p = w2*normalize(line_p) / (2*grid_sz);
 
         p1_mvp.xy += line_p;
         gl_Position = p1_mvp;

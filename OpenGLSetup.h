@@ -133,8 +133,8 @@ GLFWwindow* make_window() {
         cout << #key;                                 \
     }
 
-#define KEY_FUNC_ELSE_IF(key, func) if KEY_FUNC_HLPR (key, func)
 #define KEY_FUNC_IF(key, func) if KEY_FUNC_HLPR (key, func)
+
 
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
 

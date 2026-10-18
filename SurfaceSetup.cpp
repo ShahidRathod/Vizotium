@@ -9,6 +9,16 @@ GLuint compile_shader(GLenum type, const char* src, GLint& success);
 #include "ShaderLoader.h"
 //#include "OpenGLSetup.h"
 
+# define DEBUG_VAR(x) std::cout << ##x <<" " <<x<<"\n"
+
+template <typename T>
+void print_vec(T vec) {
+    for (int i = 0; i < T::length(); i++) {
+        std::cout << vec[i] << "  ";
+    }
+    std::cout << "\n";
+}
+
 void linkprogram(GLuint prog);
 
 constexpr int grid_pow = 8;
@@ -202,7 +212,7 @@ GLuint surface_setup() {
     return surface_program;
 }
 
-void update_random_field() {
+void update_rndm_field() {
 
     noise.make_new_field();
     noise.output_grayscale(rndm_field_mem);
@@ -296,11 +306,48 @@ void draw_grid(bool inp) {
         update_MVP_n_send(grid_mvpLoc);
     }
 
-    glBindVertexArray(vaos[0]);
     glDrawArraysInstanced(
         GL_TRIANGLE_STRIP,
         0,2*(grid_sz-1),
          2*nolines);
+
+}
+
+
+
+
+bool camera_close_surface(glm::vec3& cam_pos) {
+    glm::vec3 pos = cam_pos;
+    pos.y -= 0.05f;
+
+    constexpr float skin = 0.001f;
+
+    auto bound = [](float x) { return -0.5f <= x && x <= 0.5f; };
+    auto to_grid = [](float x, int sz) { return (int)((x + 0.5f) * sz); };
+    auto cell_pos = [](int i, int sz) { return (float)i / sz - 0.5f; };
+
+    if (!(bound(pos.x) && bound(pos.z)))
+        return 0;
+
+    const int xi = to_grid(pos.x, grid_sz);
+    const int yi = to_grid(pos.z, grid_sz);
+
+    float quad[4];
+    for (int i = 0; i < 4; ++i)
+        quad[i] = rndm_field_mem[xi + (i % 2) + (yi + i / 2) * grid_sz];
+
+    const glm::vec3 v1(1.0f, quad[1] - quad[0], 0.0f);
+    const glm::vec3 v2(0.0f, quad[2] - quad[0], 1.0f);
+    const glm::vec3 normal = glm::normalize(glm::cross(v2, v1));
+
+    const glm::vec3 cell_origin(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
+    const glm::vec3 relative = pos - cell_origin;
+    const float distance = glm::dot(normal, relative) ;
+    std::cout << "\ndistance" << distance;
+    if (distance - skin < 0.0f)
+        cam_pos -= normal * distance;
+
+    return 0;
 
 
 }

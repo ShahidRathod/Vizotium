@@ -11,8 +11,10 @@ GLuint surface_setup();
 void grid_setup();
 void update_mapscale();
 void draw_field(bool);
-void update_random_field();
+void update_rndm_field();
 void draw_grid(bool);
+
+bool camera_close_surface(glm::vec3& );
 
 extern GLuint mvpLoc;
 extern GLuint grid_mvpLoc;
@@ -28,31 +30,41 @@ void update_MVP_n_send(GLuint mvp_location) {
 
 bool inp;
 
+
+
+constexpr float move_v = 0.01;
+
 void process_input(GLFWwindow* win, Camera& cam) {
-    KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
-        KEY_FUNC_ELSE_IF(DOWN, cam.scale_inc(-0.01f))
 
-        /*KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
-        KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
-        KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
-        KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
-        */
+   
 
-        KEY_FUNC_ELSE_IF(D, cam.inc_free_z(-.01))
-        KEY_FUNC_ELSE_IF(A, cam.inc_free_z(.01))
+        KEY_FUNC_IF(UP, cam.scale_inc(0.01f))
+            KEY_FUNC_IF(DOWN, cam.scale_inc(-0.01f))
 
-        KEY_FUNC_ELSE_IF(W, cam.inc_free_x(-.01))
-        KEY_FUNC_ELSE_IF(S, cam.inc_free_x(.01))
+            /*KEY_FUNC_ELSE_IF(D, cam.inc_yaw(2.f))
+            KEY_FUNC_ELSE_IF(A, cam.inc_yaw(-2.f))
+            KEY_FUNC_ELSE_IF(W, cam.inc_pitch(2.f))
+            KEY_FUNC_ELSE_IF(S, cam.inc_pitch(-2.f))
+            */
 
-        KEY_FUNC_ELSE_IF(SPACE, cam.inc_free_y(.01))
-        KEY_FUNC_ELSE_IF(LEFT_ALT, cam.inc_free_y(-.01))
 
-        KEY_FUNC_ELSE_IF(8, cam.scale_inc(0.05f))
-        KEY_FUNC_ELSE_IF(2, cam.scale_inc(-0.05f))
+            KEY_FUNC_IF(D, cam.inc_free_z(-move_v))
+            KEY_FUNC_IF(A, cam.inc_free_z(move_v))
 
-        KEY_FUNC_ELSE_IF(END, glfwSetWindowShouldClose(win, true))
-        KEY_FUNC_ELSE_IF(SPACE, Time.stop_start())
-        KEY_FUNC_ELSE_IF(ENTER, update_random_field())
+            KEY_FUNC_IF(W, cam.inc_free_x(-move_v))
+            KEY_FUNC_IF(S, cam.inc_free_x(move_v))
+
+            KEY_FUNC_IF(SPACE, cam.inc_free_y(.01))
+            KEY_FUNC_IF(LEFT_ALT, cam.inc_free_y(-.01))
+
+            KEY_FUNC_IF(8, cam.scale_inc(0.05f))
+            KEY_FUNC_IF(2, cam.scale_inc(-0.05f))
+            
+       
+        KEY_FUNC_IF(END, glfwSetWindowShouldClose(win, true))
+        KEY_FUNC_IF(SPACE, Time.stop_start())
+        KEY_FUNC_IF(ENTER, update_rndm_field())
+        camera_close_surface(cam.free_position);
 }
 
 int main() {
@@ -72,7 +84,7 @@ int main() {
     inp = true;
     while (!glfwWindowShouldClose(window))
     {
-        CLEAR_SCREEN;
+        //CLEAR_SCREEN;
         Time.update();
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
@@ -81,9 +93,9 @@ int main() {
 
         draw_field(inp);
         draw_grid(inp);
-
+    
         if (inp) {
-           /* camera.debug_eye_angles();
+          /*  camera.debug_eye_angles();
             cout << "\nfree position: ";
             print_vec(camera.free_position);
             cout << "\nfree eye: ";
