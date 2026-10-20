@@ -9,6 +9,7 @@
 
 GLuint surface_setup();
 void grid_setup();
+void optimizer_setup();
 void update_mapscale();
 void draw_field(bool);
 void update_rndm_field();
@@ -30,7 +31,6 @@ void update_MVP_n_send(GLuint mvp_location) {
 
 
 bool inp;
-
 
 
 constexpr float move_v = 0.0004;
@@ -77,6 +77,7 @@ void process_input(GLFWwindow* win, Camera& cam) {
 
 int main() {
 
+
     ShaderReader<shader_file_sz, max_tags> shader_reader("shaders.h");
     reader = &shader_reader;
 
@@ -86,9 +87,10 @@ int main() {
 
     GLuint surface_program = surface_setup();
     grid_setup();
-    glerror("error before grid setup ");
-
     
+    optimizer_setup();
+
+    glerror("error before grid setup ");
 
     framebuffer_size_callback(window, winwidth, winheight);
 

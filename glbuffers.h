@@ -3,19 +3,26 @@
 
 
 template <int N, typename T> struct ZeroSafeArray {
-	T data[N];
-	ZeroSafeArray() {}
-	T* data_ptr = nullptr;
+	T buffer[N];
+	T* data = nullptr;
+	ZeroSafeArray() {
+		data = buffer;
+	}
+
 	T& operator[](int i) {
-		return data_ptr[i];
+		return data[i];
 	}
 
 	constexpr int len() { return N; }
-	int bytesize() { return sizeof(data); }
+	int bytesize() { return sizeof(buffer); }
 
 };
 
 template <typename T> struct ZeroSafeArray<0, T> {
+	T* data = nullptr;
+	T& operator[](int i) {
+		return data[i];
+	}
 	ZeroSafeArray() {}
 };
 
@@ -37,16 +44,16 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 
 	GLuint map_flags = 0;
 
-	constexpr int GbyteSize() { return sizeof(T) * Gbuff_N; }
+	constexpr int Gbytesize() { return sizeof(T) * Gbuff_N; }
 
 	void init_buffer() {
-		data_ptr = data;
 		glGenBuffers(1, &id);
 	}
 
-	void flush_explisit() { map_flags |= GL_MAP_FLUSH_EXPLICIT_BIT;}
-	void map_persistant() { map_flags |= GL_MAP_PERSISTENT_BIT;}
-	void map_coherent() {  map_flags |= GL_MAP_COHERENT_BIT;}
+	void map_flushexplisit() { map_flags |= GL_MAP_FLUSH_EXPLICIT_BIT; }
+	void map_persistant() { map_flags |= GL_MAP_PERSISTENT_BIT; }
+	void map_coherent() { map_flags |= GL_MAP_COHERENT_BIT; }
+	void map_write() { map_flags |= GL_MAP_WRITE_BIT; }
 
 	bool is_binded() {
 		return BindedBuffer<buffer_type>::id == this->id;
@@ -61,31 +68,34 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 
 	virtual void upload(GLuint draw_type) {
 		if (!is_binded()) std::cout << "not binded";
-		glBufferData(buffer_type, this->bytesize(), this->data_ptr, draw_type);
+		glBufferData(buffer_type, Cbuff_N * sizeof(T), this->data, draw_type);
 	}
 
-	void upload_persistant(GLuint flags) {
-		if (!is_binded()) std::cout << "not binded";
-		glBufferStorage(buffer_type, GbyteSize(), this->data_ptr, map_flags);
+	void relloc(GLuint draw_type,int count) {
+		glBufferData(buffer_type,count*sizeof(T), this->data, draw_type);
 	}
 
-	void* map(int start , int end) {
+	void upload_persistant() {
 		if (!is_binded()) std::cout << "not binded";
-		mapped_ptr = glMapBufferRange(
+		glBufferStorage(buffer_type, Gbytesize(), this->data, map_flags);
+	}
+
+	void map(int start , int end) {
+		if (!is_binded()) std::cout << "not binded";
+		void *mapped_ptr = glMapBufferRange(
 			buffer_type,
 			start,
 			end,
 			map_flags
 		);
-		return mapped_ptr;
+		this->data= (T*)(mapped_ptr);
 	}
 
-	void* map_full() { 
-		return map(0,Gbytesize()); 
-	}
+	void map_full() { map(0, Gbytesize()); }
 
 	void unmap() {
 		glUnmapBuffer(buffer_type);
+		this->data = this->buffer;
 	}
 
 	void flush(size_t start, size_t end) {
@@ -104,25 +114,24 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 
 
 template <int N,typename T,GLuint buffer_type>
-struct PersistantBuffer : GlBuffer<0,N,T,buffer_type>{
-	PersistantBuffer() {
-		map_persistant();
-		data_ptr = (T*)map_full();
-	}
-};
+struct PersistantBuffer : GlBuffer<0,N,T,buffer_type>{};
 
 
 
 template<int CN,int GN, typename T>
-using VBO = GlBuffer<CN,GN, T, GL_ARRAY_BUFFER>;
+using VBOBase = GlBuffer<CN,GN, T, GL_ARRAY_BUFFER>;
 
 template<int N, typename T>
 using PersistantVBO = GlBuffer<0, N, T, GL_ARRAY_BUFFER>;
 
+template<int N, typename T>
+using VBO = GlBuffer<N, N, T, GL_ARRAY_BUFFER>;
 
 template<int N>
-using PersistantPlainVBO = VBO<0, N, float>;
+using PersistantPlainVBO = VBOBase<0, N, float>;
 
+template<int N>
+using PlainVBO = VBO<N, float>;
 
 template <typename T,int N>
 struct LineEboGlStrip {
@@ -178,7 +187,7 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 	}
 
 	constexpr int draw_count() {
-		return Gbytesize()/ (sizeof(EboInt));
+		return this->Gbytesize()/ (sizeof(EboInt));
 	}
 
 

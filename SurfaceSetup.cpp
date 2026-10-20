@@ -20,7 +20,7 @@ constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
 
 void update_MVP_n_send(GLuint loc);
 
-PersistantVBO<3, glm::vec3> offset;
+VBO<3, glm::vec3> offset;
 
 glm::vec3 offset_data[] = {
     {  -0.73, 1 - .53, 0.0f },
@@ -42,7 +42,7 @@ PersistantPlainVBO<grid_sz_sq * 2> rndm_field;
 // first half contains the rndm_field
 //second half contains the noise
 
-float* rndm_field_mem;
+
 
 GLsync draw_done;
 
@@ -56,18 +56,46 @@ GLuint mapscaleLoc;
 GLuint vaos[4];
 
 
+void update_rndm_field() {
+
+    noise.make_new_field();
+    noise.output_grayscale(rndm_field.data);
+    noise.grayscale_noise(rndm_field.data + grid_sz_sq);
+
+    //memset(rndm_field_mem, 0.f, grid_sz_sq * sizeof(float));
+
+    GLenum type = glClientWaitSync(draw_done, 0, (int)1e4);
+
+    switch (type)
+    {
+    case GL_ALREADY_SIGNALED:
+        std::cout << "already signaled";
+    case GL_CONDITION_SATISFIED:
+        std::cout << "condition satisfied";
+    case GL_TIMEOUT_EXPIRED:
+        std::cout << "time out ";
+    case GL_WAIT_FAILED:
+        std::cout << "error in sync";
+    default:
+        break;
+    }
+    rndm_field.flushfull();
+}
 void setup_surface(GLuint program) {
 
     memcpy(offset.data, &offset_data, sizeof(offset_data));
+
     glerror(" e1");
     grid_szLoc = glGetUniformLocation(program, "grid_sz");
     mvpLoc = glGetUniformLocation(program, "MVP");
     mapscaleLoc = glGetUniformLocation(program, "mapscale");
     glerror(" e2");
+    
     GLuint& vao = vaos[0];
     GLuint& mapscalevao = vaos[1];
     GLuint& mapoffsetvao = vaos[2];
     GLuint& sur_vao = vaos[3];
+
     glerror(" e3");
 
     glGenVertexArrays(4, vaos);
@@ -80,26 +108,21 @@ void setup_surface(GLuint program) {
     offset.init_buffer();
     sur_ebo.init_buffer();
 
+
+    rndm_field.map_persistant();
+    rndm_field.map_coherent();
+    rndm_field.map_write();
+
+   
+
     glerror(" e5");
 
 
     rndm_field.bind();
-    glerror(" e6");
+    rndm_field.upload_persistant();
+    rndm_field.map_full();
+    update_rndm_field();
 
-    noise.make_new_field();
-    glerror(" e7");
-
-    noise.output_grayscale(rndm_field.data);
-    noise.grayscale_noise(rndm_field.data + grid_sz_sq);
-
-    GLuint surface_flags =
-        GL_MAP_WRITE_BIT |
-        GL_MAP_PERSISTENT_BIT |
-        GL_MAP_COHERENT_BIT;
-
-
-    rndm_field.upload_persistant(surface_flags);
-    rndm_field_mem = (float*)rndm_field.map_full(surface_flags);
     glerror(" e8");
 
     sur_ebo.bind();
@@ -196,31 +219,6 @@ GLuint surface_setup() {
     return surface_program;
 }
 
-void update_rndm_field() {
-
-    noise.make_new_field();
-    noise.output_grayscale(rndm_field_mem);
-    noise.grayscale_noise(rndm_field_mem + grid_sz_sq);
-
-    //memset(rndm_field_mem, 0.f, grid_sz_sq * sizeof(float));
-
-    GLenum type = glClientWaitSync(draw_done, 0, (int)1e4);
-
-    switch (type)
-    {
-    case GL_ALREADY_SIGNALED:
-        std::cout << "already signaled";
-    case GL_CONDITION_SATISFIED:
-        std::cout << "condition satisfied";
-    case GL_TIMEOUT_EXPIRED:
-        std::cout << "time out ";
-    case GL_WAIT_FAILED:
-        std::cout << "error in sync";
-    default:
-        break;
-    }
-    rndm_field.flushfull();
-}
 
 
 void draw_field(bool inp) {
@@ -318,7 +316,7 @@ bool camera_close_surface(glm::vec3& cam_pos) {
 
     float quad[4];
     for (int i = 0; i < 4; ++i)
-        quad[i] = rndm_field_mem[xi + (i % 2) + (yi + i / 2) * grid_sz];
+        quad[i] = rndm_field[xi + (i % 2) + (yi + i / 2) * grid_sz];
 
     const glm::vec3 v1(1.0f, quad[1] - quad[0], 0.0f);
     const glm::vec3 v2(0.0f, quad[2] - quad[0], 1.0f);

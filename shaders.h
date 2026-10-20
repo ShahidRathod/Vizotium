@@ -64,17 +64,16 @@ void main()
 
 
 <fragment>
-
 #version 440 core
 in vec3 clr;
 out vec4 FragColor;
 
 void main()
 {
-
     FragColor = vec4(clr, 1.0);
 }
 < / fragment>
+
 
 < / heightmap>
 
@@ -155,9 +154,8 @@ void main() {
 
 <fragment>
 <$heightmap:fragment>
-
-
 </fragment>
+
 </surface>
 
 
@@ -233,6 +231,7 @@ void main() {
     int p1_index = index(v_id, ins_id);
 
     vec3 p1 = line_point(v_id, ins_id);
+
     p1.yz = p1.zy;
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
 
@@ -245,9 +244,9 @@ void main() {
     else {
         p2.yz = p2.zy;
         vec4 p2_mvp = MVP * vec4(p2, 1.0);
-
         gl_Position = perpen_point(p1_mvp,p2_mvp);
     }
+
     </line_if_else>
 
     clr = color(height[p1_index]);
@@ -270,12 +269,12 @@ void main() {
 }
 
 < / fragment>
-
 < / line>
 
-<trail>
+<trial>
 
 <vertex>
+#version 440 core
 
 struct Edge {
     vec3 p1;
@@ -287,7 +286,7 @@ layout(location = 1) Edge in edge;
 <$perpen_point>
 
 void main() {
-    
+
     <$is_even>;
 
     vec3 p1 = edge.p1;
@@ -299,5 +298,6 @@ void main() {
 }
 
 </vertex>
+</trial>
 
-</trail>
+
