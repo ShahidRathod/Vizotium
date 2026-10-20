@@ -5,9 +5,9 @@
 template <int N, typename T> struct ZeroSafeArray {
 	T data[N];
 	ZeroSafeArray() {}
-	T* data_ptr;
+	T* data_ptr = nullptr;
 	T& operator[](int i) {
-		return data[i];
+		return data_ptr[i];
 	}
 
 	constexpr int len() { return N; }
@@ -31,25 +31,27 @@ struct BindedBuffer {
 template <GLuint buffer_type>
 GLuint BindedBuffer<buffer_type>::id = -1;
 
-template <int N, typename T, GLuint buffer_type>
-struct GlBuffer : ZeroSafeArray<N, T> {
+template <int Cbuff_N,int Gbuff_N, typename T, GLuint buffer_type>
+struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 	GLuint id;
-	bool is_persistant = false;
-	bool is_flush = false;
-	bool is_mapped = true;
-	int map_start = -1;
-	int map_end = -1;
-	void* mapped_ptr;
+
+	GLuint map_flags = 0;
+
+	constexpr int GbyteSize() { return sizeof(T) * Gbuff_N; }
 
 	void init_buffer() {
-		if constexpr (N > 0) {
-			glGenBuffers(1, &id);
-		}
+		data_ptr = data;
+		glGenBuffers(1, &id);
 	}
+
+	void flush_explisit() { map_flags |= GL_MAP_FLUSH_EXPLICIT_BIT;}
+	void map_persistant() { map_flags |= GL_MAP_PERSISTENT_BIT;}
+	void map_coherent() {  map_flags |= GL_MAP_COHERENT_BIT;}
 
 	bool is_binded() {
 		return BindedBuffer<buffer_type>::id == this->id;
 	}
+
 	void bind() {
 		if (!is_binded()) {
 			glBindBuffer(buffer_type, this->id);
@@ -59,34 +61,27 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 
 	virtual void upload(GLuint draw_type) {
 		if (!is_binded()) std::cout << "not binded";
-		if constexpr (N > 0) {
-			glBufferData(buffer_type, this->bytesize(), this->data, draw_type);
-		}
+		glBufferData(buffer_type, this->bytesize(), this->data_ptr, draw_type);
 	}
 
 	void upload_persistant(GLuint flags) {
 		if (!is_binded()) std::cout << "not binded";
-		if constexpr (N > 0) {
-			glBufferStorage(buffer_type, this->bytesize(), this->data, flags);
-		}
-		is_persistant = true;
+		glBufferStorage(buffer_type, GbyteSize(), this->data_ptr, map_flags);
 	}
 
-	void* map(int start , int end,GLuint more_flags) {
+	void* map(int start , int end) {
 		if (!is_binded()) std::cout << "not binded";
-		GLuint flags = (is_persistant) ? GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT : GL_MAP_WRITE_BIT;
-		std::cout <<"error " << glGetError();
 		mapped_ptr = glMapBufferRange(
 			buffer_type,
 			start,
 			end,
-			flags | more_flags
+			map_flags
 		);
 		return mapped_ptr;
 	}
 
-	void* map_full(GLuint more_flags = 0) {
-		return map(0,this->bytesize(),more_flags);
+	void* map_full() { 
+		return map(0,Gbytesize()); 
 	}
 
 	void unmap() {
@@ -98,11 +93,7 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 	}
 
 	void flushfull() {
-		flush(0,this->bytesize());
-	}
-
-	void bind_ssbo(GLuint flags,int location) {
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER,location,this->id);
+		flush(0,Gbytesize());
 	}
 
 	~GlBuffer() {
@@ -112,12 +103,25 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 };
 
 
+template <int N,typename T,GLuint buffer_type>
+struct PersistantBuffer : GlBuffer<0,N,T,buffer_type>{
+	PersistantBuffer() {
+		map_persistant();
+		data_ptr = (T*)map_full();
+	}
+};
+
+
+
+template<int CN,int GN, typename T>
+using VBO = GlBuffer<CN,GN, T, GL_ARRAY_BUFFER>;
 
 template<int N, typename T>
-using VBO = GlBuffer<N, T, GL_ARRAY_BUFFER>;
+using PersistantVBO = GlBuffer<0, N, T, GL_ARRAY_BUFFER>;
+
 
 template<int N>
-using PlainVBO = VBO<N, float>;
+using PersistantPlainVBO = VBO<0, N, float>;
 
 
 template <typename T,int N>
@@ -142,12 +146,17 @@ struct LineEboGlStrip {
 using EboInt = unsigned short int;
 
 template <int N>
-using SurfaceEBOBuffer = GlBuffer<N-1, LineEboGlStrip<EboInt,N>, GL_ELEMENT_ARRAY_BUFFER>;
+using SurfaceEBOBuffer = 
+GlBuffer<
+	N-1,N-1, 
+	LineEboGlStrip<EboInt,N>, 
+	GL_ELEMENT_ARRAY_BUFFER>;
 
 template <int N>
 struct SurfaceEBO : SurfaceEBOBuffer<N> {
 
 	void init_buffer() {
+
 		SurfaceEBOBuffer<N>::init_buffer();
 		for (EboInt i = 0; i < N - 1; i++) {
 			LineEboGlStrip<EboInt, N>& line = this->data[i];
@@ -169,7 +178,7 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 	}
 
 	constexpr int draw_count() {
-		return this->bytesize()/ (sizeof(EboInt));
+		return Gbytesize()/ (sizeof(EboInt));
 	}
 
 

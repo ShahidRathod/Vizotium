@@ -20,7 +20,7 @@ constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
 
 void update_MVP_n_send(GLuint loc);
 
-VBO<3, glm::vec3> offset;
+PersistantVBO<3, glm::vec3> offset;
 
 glm::vec3 offset_data[] = {
     {  -0.73, 1 - .53, 0.0f },
@@ -37,7 +37,7 @@ SurfaceEBO<grid_sz> sur_ebo;
 // random fields
 
 ComplexNoise<grid_pow> noise;
-PlainVBO<grid_sz_sq * 2> rndm_field;
+PersistantPlainVBO<grid_sz_sq * 2> rndm_field;
 
 // first half contains the rndm_field
 //second half contains the noise
@@ -54,7 +54,6 @@ GLuint grid_szLoc;
 GLuint mvpLoc;
 GLuint mapscaleLoc;
 GLuint vaos[4];
-
 
 
 void setup_surface(GLuint program) {
