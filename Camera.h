@@ -12,7 +12,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <limits>
 
-float min_float = std::numeric_limits<float>::min();
+inline float min_float = std::numeric_limits<float>::min();
 
 inline bool mat_debug = true;
 

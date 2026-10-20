@@ -1,3 +1,4 @@
+#pragma once
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -406,6 +407,4 @@ struct ShaderReader {
 constexpr int shader_file_sz = 6000;
 constexpr int max_tags = 64;
 
-ShaderReader<shader_file_sz, max_tags> reader("shaders.h");
-
-//#define DECLARE_SHADER_READER extern ShaderReader<shader_file_sz, max_tags> reader;
+extern ShaderReader<shader_file_sz, max_tags>* reader;

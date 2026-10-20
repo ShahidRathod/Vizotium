@@ -1,24 +1,8 @@
 #include "pch.h"
-#include "glbuffers.h"
+#include "OpenGLSetup.h"
 #include "Gaussian.h"
 
-
-
-GLuint compile_shader(GLenum type, const char* src, GLint& success);
-
-#include "ShaderLoader.h"
-
 # define DEBUG_VAR(x) std::cout << ##x <<" " <<x<<"\n"
-
-template <typename T>
-void print_vec(T vec) {
-    for (int i = 0; i < T::length(); i++) {
-        std::cout << vec[i] << "  ";
-    }
-    std::cout << "\n";
-}
-
-void linkprogram(GLuint prog);
 
 constexpr int grid_pow = 8;
 constexpr int grid_sz = 1 << grid_pow;
@@ -201,8 +185,8 @@ GLuint surface_setup() {
 
     surface_program = glCreateProgram();
 
-    reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
-    reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
+    reader->compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
+    reader->compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);
 
     linkprogram(surface_program);
 
@@ -279,8 +263,8 @@ void grid_setup() {
     grid_program = glCreateProgram();
 
 
-    reader.compile_shader_for("line", GL_VERTEX_SHADER, grid_program);
-    reader.compile_shader_for("line", GL_FRAGMENT_SHADER, grid_program);
+    reader->compile_shader_for("line", GL_VERTEX_SHADER, grid_program);
+    reader->compile_shader_for("line", GL_FRAGMENT_SHADER, grid_program);
 
     linkprogram(grid_program);
 

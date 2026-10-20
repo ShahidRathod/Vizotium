@@ -21,6 +21,8 @@ extern GLuint grid_mvpLoc;
 using std::cout, std::cerr;
 
 
+ShaderReader<shader_file_sz, max_tags>* reader = nullptr;
+
 void update_MVP_n_send(GLuint mvp_location) {
     glm::mat4 mvp = camera.free_look();
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
@@ -74,6 +76,9 @@ void process_input(GLFWwindow* win, Camera& cam) {
 }
 
 int main() {
+
+    ShaderReader<shader_file_sz, max_tags> shader_reader("shaders.h");
+    reader = &shader_reader;
 
     mat_debug = false;
 

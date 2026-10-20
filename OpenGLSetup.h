@@ -1,13 +1,13 @@
+#pragma once
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "Camera.h"
 
-
 #define RED "\x1b[31m"
 #define RESET "\x1b[0m"
 
-GLuint compile_shader(GLenum type, const char* src,GLint &success) {
+inline GLuint compile_shader(GLenum type, const char* src,GLint &success) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
@@ -25,7 +25,7 @@ GLuint compile_shader(GLenum type, const char* src,GLint &success) {
 
 
 
-void linkprogram(GLuint prog) {
+inline void linkprogram(GLuint prog) {
     glLinkProgram(prog);
 
     GLint success;
@@ -38,16 +38,21 @@ void linkprogram(GLuint prog) {
     }
 }
 
-float winwidth = 1280;
-float winheight = 720;
+#include "glbuffers.h"
+#include "ShaderLoader.h"
 
-Camera camera;
+inline float winwidth = 1280;
+inline float winheight = 720;
+
+inline Camera camera;
 
 extern glm::vec2 mapscale;
 extern const int  grid_sz;
 extern bool win_resized ;
 
-void framebuffer_size_callback(GLFWwindow*, int width, int height) {
+extern bool inp;
+
+inline void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
     winwidth = float(width);
     winheight = float(height);
@@ -62,9 +67,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     win_resized = true;
 }
 
-extern bool inp;
-
-void mouse_callback(GLFWwindow*, double x, double y) {
+inline void mouse_callback(GLFWwindow*, double x, double y) {
     camera.calibrate_eye(x, y);
     inp = true;
 }
@@ -88,9 +91,9 @@ struct TimeObj {
     }
 
 };
-TimeObj Time{};
+inline TimeObj Time{};
 
-GLFWwindow* make_window() {
+inline GLFWwindow* make_window() {
 
     if (!glfwInit()) std::exit(EXIT_FAILURE);
 
