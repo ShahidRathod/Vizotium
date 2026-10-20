@@ -195,53 +195,62 @@ int index(int v_id, int ins_id) {
     return index;
 }
 
-
 vec3 line_point(int v_id, int ins_id) {
     int indx = index(v_id, ins_id);
     return xyzcoords(indx, height[indx] );
 
 }
 
+<perpen_point>
+vec4 perpen_point(vec4 p1_mvp,vec4 p2_mvp) {
+    
+    float w1 = p1_mvp[3];
+    float w2 = p2_mvp[3];
+
+    vec2 line = p2_mvp.xy - p1_mvp.xy;
+    vec2 line_p;
+
+    line_p.x = -line.y;
+    line_p.y = line.x;
+
+    line_p = w2 * normalize(line_p) / (2 * grid_sz);
+
+    p1_mvp.xy += line_p;
+    return p1_mvp;
+    
+}
+</perpen_point>
+
+
 void main() {
 
-
+    <is_even>
     int v_id = gl_VertexID;
     int ins_id = gl_InstanceID;
-
-    int p1_index = index(v_id, ins_id);
-    vec3 p1 = line_point(v_id, ins_id);
+    bool is_even = v_id % 2 == 0;
+    </is_even>
     
+    int p1_index = index(v_id, ins_id);
+
+    vec3 p1 = line_point(v_id, ins_id);
     p1.yz = p1.zy;
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
-    
-    bool is_even = v_id % 2 == 0;
 
-   
-    clr = color(height[p1_index]);
-
+    vec3 p2 = line_point(v_id + 2, ins_id);
+  
+    <line_if_else>
     if (is_even) {
         gl_Position = p1_mvp;   
     }
     else {
-        vec3 p2 = line_point(v_id + 2, ins_id);
         p2.yz = p2.zy;
-
         vec4 p2_mvp = MVP * vec4(p2, 1.0);
 
-        float w1 = p1_mvp[3];
-        float w2 = p2_mvp[3];
-
-        vec2 line = p2_mvp.xy - p1_mvp.xy;
-        vec2 line_p;
-        
-        line_p.x = -line.y;
-        line_p.y = line.x;
-        
-        line_p = w2*normalize(line_p) / (2*grid_sz);
-
-        p1_mvp.xy += line_p;
-        gl_Position = p1_mvp;
+        gl_Position = perpen_point(p1_mvp,p2_mvp);
     }
+    </line_if_else>
+
+    clr = color(height[p1_index]);
 
 }
 
@@ -252,7 +261,6 @@ void main() {
 
 
 out vec4 FragColor;
-
 in vec3 clr;
 
 void main() {
@@ -263,4 +271,33 @@ void main() {
 
 < / fragment>
 
-< /line>
+< / line>
+
+<trail>
+
+<vertex>
+
+struct Edge {
+    vec3 p1;
+    vec3 p2;
+};
+
+layout(location = 1) Edge in edge;
+
+<$perpen_point>
+
+void main() {
+    
+    <$is_even>;
+
+    vec3 p1 = edge.p1;
+    p1.yz = p1.zy;
+    vec4 p1_mvp = MVP * vec4(p1, 1.0);
+    vec3 p2 = edge.p2;
+
+    <$line_if_else>
+}
+
+</vertex>
+
+</trail>

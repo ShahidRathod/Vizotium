@@ -13,7 +13,6 @@ void update_mapscale();
 void draw_field(bool);
 void update_rndm_field();
 void draw_grid(bool);
-
 bool camera_close_surface(glm::vec3& );
 
 extern GLuint mvpLoc;
@@ -32,7 +31,7 @@ bool inp;
 
 
 
-constexpr float move_v = 0.0005;
+constexpr float move_v = 0.0004;
 constexpr float v_limit = 0.01;
 
 glm::vec3 acceleration = { 0.f, 0.f, 0.f };

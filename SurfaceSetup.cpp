@@ -2,12 +2,11 @@
 #include "glbuffers.h"
 #include "Gaussian.h"
 
-#define glerror(str)  std::cout <<  str << glGetError() << "\n";
+
 
 GLuint compile_shader(GLenum type, const char* src, GLint& success);
 
 #include "ShaderLoader.h"
-//#include "OpenGLSetup.h"
 
 # define DEBUG_VAR(x) std::cout << ##x <<" " <<x<<"\n"
 
@@ -44,9 +43,10 @@ glm::vec3 offset_data[] = {
     { -0.73, -.53, 0.0f },
     { 1, 0.0f, 0.0f },
 };
+
 glm::vec3* surface_offset = &offset_data[2];
 glm::vec3* offset_ptr;
-glm::vec2 mapscale = { 1.f,1.f };
+glm::vec2 mapscale = { 0.5,0.5 };
 bool win_resized = true;
 
 SurfaceEBO<grid_sz> sur_ebo;
@@ -155,6 +155,7 @@ void setup_surface(GLuint program) {
         sizeof(float),
         (void*)(noise_layout_stride)
     );
+
     glEnableVertexAttribArray(noise_layout);
     glerror(" e11");
 
@@ -167,6 +168,7 @@ void setup_surface(GLuint program) {
         sizeof(float),
         (void*)noise_layout_stride
     );
+
     glEnableVertexAttribArray(noiseclr_layout);
 
     glerror(" e12");
@@ -198,7 +200,6 @@ void setup_surface(GLuint program) {
 GLuint surface_setup() {
 
     surface_program = glCreateProgram();
-
 
     reader.compile_shader_for("surface", GL_VERTEX_SHADER, surface_program);
     reader.compile_shader_for("surface", GL_FRAGMENT_SHADER, surface_program);

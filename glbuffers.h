@@ -109,6 +109,7 @@ struct GlBuffer : ZeroSafeArray<N, T> {
 	~GlBuffer() {
 		glDeleteBuffers(1, &id);
 	}
+
 };
 
 
@@ -120,17 +121,17 @@ template<int N>
 using PlainVBO = VBO<N, float>;
 
 
-
-
 template <typename T,int N>
 struct LineEboGlStrip {
 	T start;
 	T arr[2 * (N)];
 	T end;
+	
 	void make_degenerates() { 
 		end = arr[2 * N - 1]; 
 		start = arr[0];
 	}
+
 	void print() {
 		//std::cout<<(int)start[0]<<" "<<(int)start[1]<<" ";
 		for (int i = 0; i < 2 * N; i++) std::cout << (int)arr[i] << " ";
@@ -175,3 +176,4 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 
 };
 
+#define glerror(str)  std::cout <<  str << glGetError() << "\n";

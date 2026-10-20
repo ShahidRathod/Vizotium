@@ -175,11 +175,13 @@ FFTPack<n / 2> FFTPack<n>::odd;
 template<>
 struct FFTPack<1> : ComplexArrayFloat<1>
 {
+
     template<int N>
     inline void butterfly(int s, FFTPack<N>& input, int sign) {
         real[0] = input.real[s];
         imag[0] = input.imag[s];
     }
+
 };
 
 
@@ -187,8 +189,8 @@ struct Indx { int i, j; };
 
 template <int sz>
 struct FFT2D {
-    static constexpr int sz_sq = sz * sz;
 
+    static constexpr int sz_sq = sz * sz;
     FFTPack<sz> input[sz], fx[sz], fy[sz];
 
     FFT2D() {}

@@ -18,9 +18,6 @@
     <ClCompile Include="Vizotium.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="glbuffers.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -28,6 +25,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Optimizers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
