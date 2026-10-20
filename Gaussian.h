@@ -1,16 +1,8 @@
 #pragma once
 #include <random>
-#include <functional>
-#include <cmath>
 #include <numbers>
 #include <complex>
-#include <iostream>
-#include <algorithm>
 #include <initializer_list>
-#include <fstream>
-#include <sstream>
-#include <stdlib.h>
-#include <numbers>
 
 
 template <typename T, int sz>

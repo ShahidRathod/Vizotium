@@ -1,6 +1,5 @@
 #pragma once
-#include <glad/glad.h>
-#include <iostream>
+
 
 
 template <int N, typename T> struct ZeroSafeArray {

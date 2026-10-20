@@ -1,11 +1,9 @@
 #pragma once
-#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
-#include <iostream>
+
 #include "utils.h"
 
 enum class Relation { ordered, notcoexist, norelation, singular };
