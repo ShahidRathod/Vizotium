@@ -5,24 +5,18 @@
 template <int N, typename T> struct ZeroSafeArray {
 	T buffer[N];
 	T* data = nullptr;
+
 	ZeroSafeArray() {
 		data = buffer;
 	}
-
-	T& operator[](int i) {
-		return data[i];
-	}
-
-	constexpr int len() { return N; }
 	int bytesize() { return sizeof(buffer); }
 
 };
 
-template <typename T> struct ZeroSafeArray<0, T> {
+template <typename T> struct ZeroSafeArray<0, T>  {
 	T* data = nullptr;
-	T& operator[](int i) {
-		return data[i];
-	}
+	T* buffer = nullptr;
+
 	ZeroSafeArray() {}
 };
 
@@ -49,7 +43,7 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 	void init_buffer() {
 		glGenBuffers(1, &id);
 	}
-
+	
 	void map_flushexplisit() { map_flags |= GL_MAP_FLUSH_EXPLICIT_BIT; }
 	void map_persistant() { map_flags |= GL_MAP_PERSISTENT_BIT; }
 	void map_coherent() { map_flags |= GL_MAP_COHERENT_BIT; }
@@ -66,18 +60,16 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 		}
 	}
 
-	virtual void upload(GLuint draw_type) {
+	virtual void upload(GLuint draw_type, int count = -1) {
 		if (!is_binded()) std::cout << "not binded";
-		glBufferData(buffer_type, Cbuff_N * sizeof(T), this->data, draw_type);
+		int size = ((count == -1) ? Gbuff_N : count) * sizeof(T);
+		glBufferData(buffer_type, size, this->data, draw_type);
 	}
 
-	void relloc(GLuint draw_type,int count) {
-		glBufferData(buffer_type,count*sizeof(T), this->data, draw_type);
-	}
-
-	void upload_persistant() {
+	void upload_persistant(int count = -1) {
 		if (!is_binded()) std::cout << "not binded";
-		glBufferStorage(buffer_type, Gbytesize(), this->data, map_flags);
+		int size = ((count == -1) ? Gbuff_N : count) * sizeof(T);
+		glBufferStorage(buffer_type, size, this->data, map_flags);
 	}
 
 	void map(int start , int end) {
