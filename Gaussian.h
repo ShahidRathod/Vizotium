@@ -81,6 +81,8 @@ inline void write_lst_to(float* arr, int sz, int d, int stride, std::stringstrea
 }
 
 
+
+
 template<int N, int n>
 struct OmegaTabel {
     inline static float omega[n + n / 4];
@@ -89,18 +91,25 @@ struct OmegaTabel {
     static float* get_minus_sin() { return (omega + n / 4); }
     static float* get_cos() { return omega; }
 
-    static void make_omega() {
+
+    template <typename T>
+    static void make_omega_hlpr(T f, float* ome) {
 
         for (int i = 0; i < n; i++)
-            omega[i] = std::cos(2 * pi * i / n);
+            ome[i] = std::cos(2 * pi * i * f / n);
 
         for (int i = 0; i < n / 4; i++)
-            omega[n + i] = omega[i];
+            ome[n + i] = omega[i];
+    }
+
+    static void make_omega() {
+        make_omega_hlpr(1, omega);
 
         if constexpr (n > 2)
             next.make_omega();
     }
 };
+
 
 template<int N>
 struct OmegaTabel<N, 2> {
@@ -147,7 +156,7 @@ struct FFTPack : ComplexArrayFloat<n>
         }
     }
 
-    template<int N>
+    template<int N>           
     inline void invrs_fft(FFTPack<N>& input) {
         butterfly(0, input, -1); // -minus_sin = sin
     }
@@ -232,10 +241,11 @@ struct FFT2D {
 
 };
 
-template <int N>
-struct Height {
-    float arr[N * N];
-};
+#define DECLARE_CONSTEXPR_GRID_SZ \
+constexpr int grid_pow = 8;\
+constexpr int grid_sz = 1 << grid_pow;\
+
+DECLARE_CONSTEXPR_GRID_SZ
 
 template <int k>
 struct ComplexNoise {
@@ -255,6 +265,7 @@ struct ComplexNoise {
     std::normal_distribution<float> normal{ 0.f, standard };
     std::default_random_engine engine;
     int seed;
+
     void set_seed(int val) { seed = val; engine.seed(seed); }
     void gen_seed() { set_seed(seed_gen()); }
 
@@ -385,4 +396,59 @@ struct ComplexNoise {
         init_spectral_bias();
     }
 };
+
+
+
+
+template<int n>
+struct Gradient {
+
+    glm::vec3 gradient;
+    float omega[n + n / 4];
+    ComplexArrayFloat<n> buffer_pack;
+
+    float* get_minus_sin() { return (omega + n / 4); }
+    float* get_cos() { return omega; }
+
+
+    void init_sin_cos(float f) {
+        OmegaTabel<n, n>::make_omega_hlpr(f, omega);
+    }
+
+    void gradient_sum(int dst_indx, ComplexArrayFloat<n>& forier_space, bool derivatv_sum) {
+
+        float* cos = get_cos();
+        float* minus_sin = get_minus_sin();
+        float real = 0, imag = 0;
+
+        for (int i = 0; i < n; i++) {
+            int factr = (derivatv_sum) ? i : 1;
+            float sin = -minus_sin[i];
+            real += cos[i] * forier_space.real[i] - sin * forier_space.imag[i];
+            imag += cos[i] * forier_space.imag[i] + sin * forier_space.real[i];
+        }
+
+        buffer_pack.real[dst_indx] = real;
+        buffer_pack.imag[dst_indx] = imag;
+
+    }
+
+    void calc_gradient_hlpr(ComplexArrayFloat<n>* pack, bool xy_indx) {
+        for (int i = 0; i < n; i++) gradient_sum(i, pack[i], xy_indx);
+        gradient_sum(0, buffer_pack, !xy_indx);
+        gradient[xy_indx] = length(glm::vec2(buffer_pack.real[0], buffer_pack.imag[0]));
+    }
+
+    glm::vec3 calc_gradeint(ComplexArrayFloat<n>* pack, glm::vec3 fxy) {
+
+        init_sin_cos(fxy.x);
+        calc_gradient_hlpr(pack, 0);
+        init_sin_cos(fxy.z);
+        calc_gradient_hlpr(pack, 1);
+
+        return gradient;
+    }
+
+};
+
 

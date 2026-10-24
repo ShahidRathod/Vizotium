@@ -276,28 +276,69 @@ void main() {
 <vertex>
 #version 440 core
 
-struct Edge {
-    vec3 p1;
-    vec3 p2;
-};
 
-layout(location = 1) Edge in edge;
+
+layout(location = 1) in vec3 ep1;
+layout(location = 2) in vec3 ep2;
+
+uniform mat4 MVP;
+out vec3 clr;
+int grid_sz = 500;
 
 <$perpen_point>
 
 void main() {
 
     <$is_even>;
-
-    vec3 p1 = edge.p1;
-    p1.yz = p1.zy;
+    vec3 p1;
+    p1.yz = ep1.zy;
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
-    vec3 p2 = edge.p2;
 
-    <$line_if_else>
+    vec3 p2 = ep2;
+
+    <$line_if_else>;
+
+    clr = vec3(1,1,1);
+    
 }
 
 </vertex>
+
+
+<fragment>
+<$heightmap:fragment>
+< / fragment>
+
 </trial>
 
+
+<debug>
+<vertex>
+#version 440 core
+
+uniform mat4 MVP;
+out vec3 clr;
+
+const vec3 vertices[3] = vec3[3](
+    vec3(-0.5, -0.5, 0.0),
+    vec3(0.5, -0.5, 0.0),
+    vec3(0.0, 0.5, 0.0)
+    );
+
+
+void main() {
+    <$is_even>;
+
+    gl_Position = MVP*vec4(vertices[v_id], 1);
+    clr = vec3(1, 1, 1);
+    
+}
+
+< / vertex>
+
+<fragment>
+<$heightmap:fragment>
+</fragment>
+
+</debug>
 

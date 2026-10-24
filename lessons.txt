@@ -3,8 +3,9 @@
 
 (1) glCreateProgram 
 (2) compile + attach all the shaders the program is going to use 
-(3) generate the cpu side locations : gGetUnifromLocation 
-(4) upload using glUnifrom . 
+(3) link program.
+(4) generate the cpu side locations : gGetUnifromLocation 
+(5) upload using glUnifrom . 
 
 
 commons mistakes : 
@@ -18,3 +19,7 @@ commons mistakes :
 Forgetting to unchanged the geometry.
 
 for sake of simplicity I made the spectral bias zero that would give us zero height but I forgot to unchange and that left miserable . thought that the rendering side is broken again.
+
+- [22/10/2026]
+
+Unmapping a persistent buffer gives glerror 1282 which is gl_invalid operation

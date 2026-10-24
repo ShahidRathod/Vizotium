@@ -1,5 +1,7 @@
 #pragma once
 
+#define RED "\x1b[31m"
+#define RESET "\x1b[0m"
 
 
 template <int N, typename T> struct ZeroSafeArray {
@@ -60,16 +62,16 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 		}
 	}
 
-	virtual void upload(GLuint draw_type, int count = -1) {
+	virtual void upload(GLuint draw_type, int count = 0) {
 		if (!is_binded()) std::cout << "not binded";
-		int size = ((count == -1) ? Gbuff_N : count) * sizeof(T);
-		glBufferData(buffer_type, size, this->data, draw_type);
+		int size = ((count == 0) ? Gbuff_N : count) * sizeof(T);
+		glBufferData(buffer_type, size, this->buffer, draw_type);
 	}
 
-	void upload_persistant(int count = -1) {
+	void upload_persistant(int count = 0) {
 		if (!is_binded()) std::cout << "not binded";
-		int size = ((count == -1) ? Gbuff_N : count) * sizeof(T);
-		glBufferStorage(buffer_type, size, this->data, map_flags);
+		int size = ((count == 0) ? Gbuff_N : count) * sizeof(T);
+		glBufferStorage(buffer_type, size, this->buffer, map_flags);
 	}
 
 	void map(int start , int end) {
@@ -94,10 +96,11 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 		glFlushMappedBufferRange(buffer_type, start, end);
 	}
 
-	void flushfull() {
+	void flushfull() { 
 		flush(0,Gbytesize());
 	}
 
+	
 	~GlBuffer() {
 		glDeleteBuffers(1, &id);
 	}
@@ -185,4 +188,11 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 
 };
 
-#define glerror(str)  std::cout <<  str << glGetError() << "\n";
+#define glerror(str)  \
+int e = glGetError();\
+std::cerr <<RED<< str << e << "\n"<<RESET;\
+}
+
+
+
+

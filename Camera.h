@@ -35,6 +35,8 @@ void print_mat(T mat) {
 
 #define DEBUG_MATRIX(name) if(mat_debug){ std::cout <<"\n\n" << #name << ":\n"; print_mat(name); }
 #define DEBUG(name) if(mat_debug){ std::cout <<"\n\n" << #name << ":\n"; std::cout<<name; }
+# define DEBUG_VAR(x) std::cout << ##x <<" " <<x<<"\n"
+
 
 #define X_AXIS_VEC3 glm::vec3 (1,0,0)
 #define Y_AXIS_VEC3 glm::vec3 (0,1,0)
@@ -186,13 +188,24 @@ struct Camera {
     bool update_camera(glm::vec3& acc, float acc_limit) {
         glm::vec3 dirtn[3] = { free_eye, Y_AXIS_VEC3, free_eye_p };
         bool moving = false;
-
+        std::cout << "\n";
         for (int i = 0; i < 3; i++) {
             float lo = free_velct[i] > 0.f ? 0.f : -acc_limit;
             float hi = free_velct[i] < 0.f ? 0.f : acc_limit;
-            free_velct[i] = glm::clamp(free_velct[i] + acc[i], lo, hi);
+            
+            bool same_sign =
+                sgn(acc[i]) == sgn(free_velct[i]);
+
+
+           /*std::cout << "same_sign ";
+            DEBUG_VAR(same_sign);
+            */
+
+            float result_velct = free_velct[i] + (1 + (!same_sign)*3) * acc[i];
+            free_velct[i] = glm::clamp(result_velct, lo, hi);
 
             if (free_velct[i] != 0.f) {
+             
                 free_pos += free_velct[i] * dirtn[i];
                 moving = true;
             }

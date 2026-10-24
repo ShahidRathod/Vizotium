@@ -4,8 +4,8 @@
 
 # define DEBUG_VAR(x) std::cout << ##x <<" " <<x<<"\n"
 
-constexpr int grid_pow = 8;
-constexpr int grid_sz = 1 << grid_pow;
+//DECLARE_CONSTEXPR_GRID_SZ;
+
 constexpr int grid_sz_sq = grid_sz * grid_sz;
 
 constexpr int offsetInstanceDivisor = grid_sz_sq;
@@ -17,8 +17,9 @@ constexpr int heightclr_layout = 2;
 constexpr int noise_layout = 3;
 constexpr int noiseclr_layout = 4;
 constexpr int noise_layout_stride = sizeof(float) * grid_sz_sq;
-
 void update_MVP_n_send(GLuint loc);
+
+ComplexNoise<grid_pow> noise;
 
 VBO<3, glm::vec3> offset;
 
@@ -36,7 +37,7 @@ bool win_resized = true;
 SurfaceEBO<grid_sz> sur_ebo;
 // random fields
 
-ComplexNoise<grid_pow> noise;
+
 PersistantPlainVBO<grid_sz_sq * 2> rndm_field;
 
 // first half contains the rndm_field
@@ -220,10 +221,8 @@ GLuint surface_setup() {
 }
 
 
-
 void draw_field(bool inp) {
     glUseProgram(surface_program);
-
     glBindVertexArray(vaos[0]);
 
     if (win_resized) {
@@ -274,6 +273,7 @@ void grid_setup() {
     glUniform1i(grid_shader_grid_szLoc, grid_sz);
     glUniform1i(nolinesLoc, nolines);
 
+
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, rndm_field.id);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, rndm_field.id);
 
@@ -297,39 +297,34 @@ void draw_grid(bool inp) {
 
 
 
+CellPerspective cell_prespective_rndm_field(glm::vec3 pos) {
+    return CellPerspective{ pos,rndm_field.data };
+}
 
 bool camera_close_surface(glm::vec3& cam_pos) {
+
     glm::vec3 pos = cam_pos;
     pos.y -= 0.05f;
 
     constexpr float skin = 0.0001f;
 
     auto bound = [](float x) { return -0.5f <= x && x <= 0.5f; };
-    auto to_grid = [](float x, int sz) { return (int)((x + 0.5f) * sz); };
-    auto cell_pos = [](int i, int sz) { return (float)i / sz - 0.5f; };
 
     if (!(bound(pos.x) && bound(pos.z)))
         return 0;
 
-    const int xi = to_grid(pos.x, grid_sz);
-    const int yi = to_grid(pos.z, grid_sz);
 
-    float quad[4];
-    for (int i = 0; i < 4; ++i)
-        quad[i] = rndm_field[xi + (i % 2) + (yi + i / 2) * grid_sz];
+    // if we are below surface then the distance will be negetive 
 
-    const glm::vec3 v1(1.0f, quad[1] - quad[0], 0.0f);
-    const glm::vec3 v2(0.0f, quad[2] - quad[0], 1.0f);
-    const glm::vec3 normal = glm::normalize(glm::cross(v2, v1));
+    CellPerspective cell = cell_prespective_rndm_field(pos);
 
-    const glm::vec3 cell_origin(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
-    const glm::vec3 relative = pos - cell_origin;
-    const float distance = glm::dot(normal, relative) ;
+ 
+    glm::vec3 normal = cell.normal();
+    float distance = glm::dot(cell.relative, normal);
+    distance -= skin;
 
-    if (distance - skin < 0.0f)
-        cam_pos -= normal * distance;
-
+    if (distance < 0.0f) cam_pos -= normal * distance;
     return 0;
 
-
 }
+

@@ -131,7 +131,7 @@ inline GLFWwindow* make_window() {
 
 #define KEY_FUNC_HLPR(key, func)                      \
     (glfwGetKey(win, GLFW_KEY_##key) == GLFW_PRESS) { \
-        inp = true;                             \
+        inp = true;                                 \
         func;                                         \
         cout << #key;                                 \
     }
@@ -143,3 +143,52 @@ inline GLFWwindow* make_window() {
 #define CLEAR_SCREEN std::cout << "\033[2J\033[1;1H"
 
 #define glerror(str)  std::cout <<  str << glGetError() << "\n";
+
+
+
+
+struct CellPerspective {
+
+    
+    float quad[4];
+    glm::vec3 position;
+    glm::vec3 origin;
+    glm::vec3 relative;
+
+    int xi, yi;
+
+    int to_grid(float x, int sz) { return (int)((x + 0.5f) * sz); }
+    float cell_pos(int i, int sz) { return (float)i / sz - 0.5f; }
+
+    void get_edges(glm::vec3 & x, glm::vec3 & z) {
+        z = glm::vec3(0.0f, quad[2] - quad[0], 1.0f);
+        x = glm::vec3(1.0f, quad[1] - quad[0], 0.0f);
+
+    }
+
+    glm::vec3 normal() {
+
+        glm::vec3 edge_x, edge_z;
+        get_edges(edge_x,edge_z);
+        return glm::normalize(glm::cross(edge_z, edge_x));
+
+    }
+
+    CellPerspective(glm::vec3 pos, float* cell_heights) {
+        position = pos;
+
+        xi = to_grid(pos.x, grid_sz);
+        yi = to_grid(pos.z, grid_sz);
+
+        for (int i = 0; i < 4; ++i)
+            quad[i] = cell_heights[xi + (i % 2) + (yi + i / 2) * grid_sz];
+
+        origin = glm::vec3(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
+
+        relative = position - origin;
+
+
+    }
+
+   
+};
