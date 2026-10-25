@@ -93,6 +93,7 @@ struct TimeObj {
 };
 inline TimeObj Time{};
 
+
 inline GLFWwindow* make_window() {
 
     if (!glfwInit()) std::exit(EXIT_FAILURE);
@@ -122,6 +123,14 @@ inline GLFWwindow* make_window() {
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_DEPTH_TEST);
 
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id, GLenum severity,
+        GLsizei length, const GLchar* message, const void* userParam) {
+            fprintf(stderr, "\n\nGL CALLBACK: %s type = 0x%x\n severity = 0x%x\n message = %s\n",
+                (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
+        }, nullptr);
 
     glViewport(0, 0, 1280, 720);
 
@@ -180,15 +189,21 @@ struct CellPerspective {
         xi = to_grid(pos.x, grid_sz);
         yi = to_grid(pos.z, grid_sz);
 
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i) 
             quad[i] = cell_heights[xi + (i % 2) + (yi + i / 2) * grid_sz];
 
         origin = glm::vec3(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
-
         relative = position - origin;
 
-
-    }
-
-   
+    } 
 };
+
+
+inline bool bound(float x) { 
+    return -0.5f <= x && x <= 0.5f; 
+}
+
+inline bool is_at_surface(glm::vec3 pos) { 
+    return bound(pos.x) && bound(pos.z); 
+}
+

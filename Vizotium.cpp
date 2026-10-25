@@ -14,6 +14,9 @@ void update_mapscale();
 void draw_field(bool);
 void update_rndm_field();
 void draw_grid(bool);
+void draw_all(bool);
+void update_all();
+void new_optimizer();
 bool camera_close_surface(glm::vec3& );
 
 extern GLuint mvpLoc;
@@ -33,8 +36,8 @@ void update_MVP_n_send(GLuint mvp_location) {
 bool inp;
 
 
-constexpr float move_v = 0.0004;
-constexpr float v_limit = 0.01;
+constexpr float move_v = 0.0002;
+constexpr float v_limit = 0.02;
 
 glm::vec3 acceleration = { 0.f, 0.f, 0.f };
 
@@ -68,8 +71,10 @@ void process_input(GLFWwindow* win, Camera& cam) {
 
 
         KEY_FUNC_IF(END, glfwSetWindowShouldClose(win, true))
-        KEY_FUNC_IF(SPACE, Time.stop_start())
+        KEY_FUNC_IF(SPACE, Time.stop_start());
         KEY_FUNC_IF(ENTER, update_rndm_field())
+        KEY_FUNC_IF(RIGHT_SHIFT, new_optimizer())
+        KEY_FUNC_IF(UP, update_all())
 
         inp = cam.update_camera(acceleration, v_limit) || inp;
         camera_close_surface(cam.free_pos);
@@ -80,19 +85,15 @@ int main() {
 
     ShaderReader<shader_file_sz, max_tags> shader_reader("shaders.h");
     reader = &shader_reader;
-
     mat_debug = false;
 
     GLFWwindow* window = make_window();
-
+    framebuffer_size_callback(window, winwidth, winheight);
     GLuint surface_program = surface_setup();
     grid_setup();
     
     optimizer_setup();
-
-    glerror("error before grid setup ");
-
-    framebuffer_size_callback(window, winwidth, winheight);
+    new_optimizer();
 
     inp = true;
     while (!glfwWindowShouldClose(window))
@@ -101,12 +102,14 @@ int main() {
         Time.update();
 
         glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        draw_field(inp);
+        
+        //update_all();
+        draw_all(inp);
+        //draw_field(inp);
         draw_grid(inp);
-    
+
+        
         if (inp) {
           /*  camera.debug_eye_angles();
             cout << "\nfree position: ";

@@ -22,4 +22,21 @@ for sake of simplicity I made the spectral bias zero that would give us zero hei
 
 - [22/10/2026]
 
-Unmapping a persistent buffer gives glerror 1282 which is gl_invalid operation
+(1) Unmapping a persistent buffer gives glerror 1282 which is gl_invalid operation
+(2) count in VertexAttribPointer can't be greater than 4 (vec4)
+
+-[24/10/2026]
+
+(1) accidently deleting the buffer when still in use will cause a nullptr crash at the drawcall
+
+here is a example how it can happen . say we have a handle class which's member is a glid you define a destructor which does :
+
+glDeletebuffers(1,&id);
+
+you make a vector of these handles and pushback a element move contructor is not defined so the local instance of handle being added gets copied and destructor gets called.
+
+- [25/10/2026]
+
+(1) if glGetError returns 1281 it is GL_INVALID_OPERATION this means argument passed in a opengl function is invalid 
+
+example glCopySubBufferData(src,dst,src_stride,dst_stride,copy_size) if the copy_size or stride is larger than the memory allocated to buffer or or any these is negative

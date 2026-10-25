@@ -100,8 +100,7 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 		flush(0,Gbytesize());
 	}
 
-	
-	~GlBuffer() {
+	void delete_buffer() {
 		glDeleteBuffers(1, &id);
 	}
 
@@ -184,7 +183,6 @@ struct SurfaceEBO : SurfaceEBOBuffer<N> {
 	constexpr int draw_count() {
 		return this->Gbytesize()/ (sizeof(EboInt));
 	}
-
 
 };
 

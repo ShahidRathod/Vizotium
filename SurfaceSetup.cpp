@@ -306,11 +306,10 @@ bool camera_close_surface(glm::vec3& cam_pos) {
     glm::vec3 pos = cam_pos;
     pos.y -= 0.05f;
 
+
     constexpr float skin = 0.0001f;
 
-    auto bound = [](float x) { return -0.5f <= x && x <= 0.5f; };
-
-    if (!(bound(pos.x) && bound(pos.z)))
+    if (!is_at_surface(cam_pos))
         return 0;
 
 
@@ -318,7 +317,6 @@ bool camera_close_surface(glm::vec3& cam_pos) {
 
     CellPerspective cell = cell_prespective_rndm_field(pos);
 
- 
     glm::vec3 normal = cell.normal();
     float distance = glm::dot(cell.relative, normal);
     distance -= skin;
