@@ -64,7 +64,14 @@ void update_rndm_field() {
     noise.grayscale_noise(rndm_field.data + grid_sz_sq);
 
     //memset(rndm_field_mem, 0.f, grid_sz_sq * sizeof(float));
-
+    
+    /*for (int i = 0; i < grid_sz; i++) {
+        for (int j = 0; j < grid_sz; j++) {
+            float l = (float)(i) / (grid_sz);
+            rndm_field.data[i * grid_sz + j] = l;
+        }
+    }*/
+    
     GLenum type = glClientWaitSync(draw_done, 0, (int)1e4);
 
     switch (type)
@@ -127,7 +134,7 @@ void setup_surface(GLuint program) {
     glerror(" e8");
 
     sur_ebo.bind();
-    sur_ebo.upload(GL_STATIC_DRAW);
+    sur_ebo.upload(GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(
         height_layout,
@@ -252,7 +259,7 @@ GLuint grid_shader_grid_szLoc;
 GLuint grid_mvpLoc;
 GLuint nolinesLoc;
 
-int nolines = grid_sz/3;
+int nolines = grid_sz / 3;
 
 void grid_setup() {
 
@@ -287,11 +294,13 @@ void draw_grid(bool inp) {
     if (inp) {
         update_MVP_n_send(grid_mvpLoc);
     }
+    
 
     glDrawArraysInstanced(
         GL_TRIANGLE_STRIP,
-        0,2*(grid_sz-1),
-         2*nolines);
+        0,
+        2 * (grid_sz - 1),
+        2 * nolines);
 
 }
 
@@ -316,8 +325,10 @@ bool camera_close_surface(glm::vec3& cam_pos) {
     // if we are below surface then the distance will be negetive 
 
     CellPerspective cell = cell_prespective_rndm_field(pos);
-
     glm::vec3 normal = cell.normal();
+
+    std::cout << "normal  ";print_vec(normal);
+
     float distance = glm::dot(cell.relative, normal);
     distance -= skin;
 

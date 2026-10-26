@@ -74,18 +74,19 @@ struct GlBuffer : ZeroSafeArray<Cbuff_N, T> {
 		glBufferStorage(buffer_type, size, this->buffer, map_flags);
 	}
 
-	void map(int start , int end) {
+	void map(int start, int end) {
 		if (!is_binded()) std::cout << "not binded";
-		void *mapped_ptr = glMapBufferRange(
+		void* mapped_ptr = glMapBufferRange(
 			buffer_type,
 			start,
 			end,
 			map_flags
 		);
-		this->data= (T*)(mapped_ptr);
+		this->data = (T*)(mapped_ptr);
 	}
 
-	void map_full() { map(0, Gbytesize()); }
+	void map_full() { 
+		map(0, Gbytesize()); }
 
 	void unmap() {
 		glUnmapBuffer(buffer_type);

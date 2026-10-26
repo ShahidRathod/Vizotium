@@ -205,15 +205,22 @@ vec4 perpen_point(vec4 p1_mvp,vec4 p2_mvp) {
     float w1 = p1_mvp[3];
     float w2 = p2_mvp[3];
 
-    vec2 line = p2_mvp.xy - p1_mvp.xy;
+    vec4 s_p1_mvp = p1_mvp / w1;
+    vec4 s_p2_mvp = p2_mvp / w2;
+
+    vec2 line = s_p2_mvp.xy - s_p1_mvp.xy;
+ 
     vec2 line_p;
 
+    float temp_line_x = line_p.x;
+    
     line_p.x = -line.y;
     line_p.y = line.x;
 
-    line_p = w2 * normalize(line_p) / (2 * grid_sz);
-
+    line_p = w1 * normalize(line_p) / (2 * grid_sz);
+    
     p1_mvp.xy += line_p;
+
     return p1_mvp;
     
 }
@@ -231,23 +238,26 @@ void main() {
     int p1_index = index(v_id, ins_id);
 
     vec3 p1 = line_point(v_id, ins_id);
-
     p1.yz = p1.zy;
-    vec4 p1_mvp = MVP * vec4(p1, 1.0);
 
+    vec4 p1_mvp = MVP * vec4(p1, 1.0);
     vec3 p2 = line_point(v_id + 2, ins_id);
   
+
     <line_if_else>
+    
     if (is_even) {
         gl_Position = p1_mvp;   
     }
+    
     else {
         p2.yz = p2.zy;
         vec4 p2_mvp = MVP * vec4(p2, 1.0);
-        gl_Position = perpen_point(p1_mvp,p2_mvp);
-    }
 
-    </line_if_else>
+        gl_Position = perpen_point(p1_mvp,p2_mvp);
+       
+    }
+    < / line_if_else>
 
     clr = color(height[p1_index]);
 
@@ -292,6 +302,7 @@ void main() {
     <$is_even>;
     vec3 p1;
     p1.yz = ep1.zy;
+    
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
 
     vec3 p2 = ep2;

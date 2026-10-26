@@ -32,8 +32,9 @@ inline float abs_real(float a, float b) { return std::abs(a); }
 inline float abs_imag(float a, float b) { return std::abs(b); }
 inline float round_imag(float a, float b) { return (float)(int)(50 * b); }
 inline float round_real(float a, float b) { return (float)(int)(50 * a); }
-
 inline float hue_func(float a, float b) { return (std::atan2(b, a) + pi) / (2 * pi); }
+
+
 //float hue_func(float a, float b) { return (std::atan2(b , a) + pi) / (2 * pi); }
 
 
@@ -315,8 +316,8 @@ struct ComplexNoise {
                 double dis = sqre(z - i - 1) + sqre(z - j - 1);
                 double scaled_dis = dis / (double)(z * z);
 
-                constexpr double spec_radii = 0.001;
-                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 1), -2);
+                constexpr double spec_radii = 0.00001;
+                double val = std::pow(1 + std::pow(scaled_dis / spec_radii, 1), -1);
                 //double val = (i == j == z - 1) ? 1 : 0.1;
 
                 set_vals(spectral_bias, (float)val,
@@ -345,6 +346,7 @@ struct ComplexNoise {
             }
         }
     }
+
     void set_imag_zero() {
         for (int i = 0; i < sz; i++) {
             for (int j = 0; j < sz; j++) {
@@ -448,7 +450,6 @@ struct Gradient {
 
         return gradient;
     }
-
 };
 
 

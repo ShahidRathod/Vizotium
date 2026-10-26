@@ -170,8 +170,9 @@ struct CellPerspective {
     float cell_pos(int i, int sz) { return (float)i / sz - 0.5f; }
 
     void get_edges(glm::vec3 & x, glm::vec3 & z) {
-        z = glm::vec3(0.0f, quad[2] - quad[0], 1.0f);
-        x = glm::vec3(1.0f, quad[1] - quad[0], 0.0f);
+
+        z = glm::normalize(glm::vec3(0.0f, quad[1] - quad[0], 1.0f));
+        x = glm::normalize(glm::vec3(1.0f, quad[2] - quad[0], 0.0f));
 
     }
 
@@ -179,6 +180,10 @@ struct CellPerspective {
 
         glm::vec3 edge_x, edge_z;
         get_edges(edge_x,edge_z);
+
+        std::cout << "edge_x ";print_vec(edge_x);
+        std::cout << "edge_z ";print_vec(edge_z);
+
         return glm::normalize(glm::cross(edge_z, edge_x));
 
     }
@@ -188,13 +193,21 @@ struct CellPerspective {
 
         xi = to_grid(pos.x, grid_sz);
         yi = to_grid(pos.z, grid_sz);
+        
+        
+        quad[0] = cell_heights[xi + yi * grid_sz];
+        quad[1] = cell_heights[xi + 1 + yi * grid_sz];
+        quad[2] = cell_heights[xi + (yi + 1) * grid_sz];
+        quad[3] = cell_heights[xi + 1 + (yi + 1) * grid_sz];
 
-        for (int i = 0; i < 4; ++i) 
-            quad[i] = cell_heights[xi + (i % 2) + (yi + i / 2) * grid_sz];
+
+        std::cout << "position ";print_vec(position);
 
         origin = glm::vec3(cell_pos(xi, grid_sz), quad[0], cell_pos(yi, grid_sz));
-        relative = position - origin;
+        std::cout << "origin  ";print_vec(origin);
 
+        relative = position - origin;
+        std::cout << "relative  ";print_vec(relative);
     } 
 };
 

@@ -106,10 +106,10 @@ int main() {
         
         //update_all();
         draw_all(inp);
-        //draw_field(inp);
+        draw_field(inp);
         draw_grid(inp);
+ 
 
-        
         if (inp) {
           /*  camera.debug_eye_angles();
             cout << "\nfree position: ";
