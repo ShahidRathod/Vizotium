@@ -34,8 +34,13 @@ void update_MVP_n_send(GLuint mvp_location) {
 
 
 bool inp;
+bool draw_field_b = true;
 
+void draw_field_sw() {
 
+    draw_field_b = false;
+
+}
 constexpr float move_v = 0.0002;
 constexpr float v_limit = 0.02;
 
@@ -75,6 +80,7 @@ void process_input(GLFWwindow* win, Camera& cam) {
         KEY_FUNC_IF(ENTER, update_rndm_field())
         KEY_FUNC_IF(RIGHT_SHIFT, new_optimizer())
         KEY_FUNC_IF(UP, update_all())
+        KEY_FUNC_IF(K, draw_field_sw())
 
         inp = cam.update_camera(acceleration, v_limit) || inp;
         camera_close_surface(cam.free_pos);
@@ -105,8 +111,10 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         //update_all();
-        draw_all(inp);
-        draw_field(inp);
+        //draw_all(inp);
+
+        if (draw_field_b) draw_field(inp);
+        
         draw_grid(inp);
  
 
@@ -129,6 +137,7 @@ int main() {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        draw_field_b = true;
         process_input(window, camera);
 
 

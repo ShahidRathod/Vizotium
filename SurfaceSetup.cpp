@@ -259,6 +259,7 @@ GLuint grid_shader_grid_szLoc;
 GLuint grid_mvpLoc;
 GLuint nolinesLoc;
 
+
 int nolines = grid_sz / 3;
 
 void grid_setup() {
@@ -299,7 +300,7 @@ void draw_grid(bool inp) {
     glDrawArraysInstanced(
         GL_TRIANGLE_STRIP,
         0,
-        2 * (grid_sz - 1),
+        2 * (grid_sz-1),
         2 * nolines);
 
 }

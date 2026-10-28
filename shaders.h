@@ -28,7 +28,7 @@ vec3 color(float h)
     return clamp(c0 + h * (c1 + h * (c2 + h * (c3 + h * c4))), 0.0, 1.0);
 }
 
-</viridis>
+< / viridis>
 
 const vec3 xyoffset = vec3(0, 0, 0);
 
@@ -109,7 +109,7 @@ vec3 contour(vec3 c)
 
     for (float i = -fac; i < fac; i += interval)
     {
-        if (i-0.5 <= k && k < i + 0.5)
+        if (i - 0.5 <= k && k < i + 0.5)
             return vec3(1.0);
     }
 
@@ -145,18 +145,18 @@ void main() {
         coords.z = -1; // map is always closer than 3d surface 
         gl_Position = vec4(coords, 1);
         if (ins_id == 1) clr = contour(clr);
-         
+
     }
 
 }
 
-</   vertex>
+< / vertex>
 
 <fragment>
 <$heightmap:fragment>
-</fragment>
+< / fragment>
 
-</surface>
+< / surface>
 
 
 <line>
@@ -195,75 +195,78 @@ int index(int v_id, int ins_id) {
 
 vec3 line_point(int v_id, int ins_id) {
     int indx = index(v_id, ins_id);
-    return xyzcoords(indx, height[indx] );
+    return xyzcoords(indx, height[indx]);
 
 }
 
+
+float line_thickness = 0.002;
+
 <perpen_point>
-vec4 perpen_point(vec4 p1_mvp,vec4 p2_mvp) {
-    
+vec4 perpen_point(vec4 p1_mvp, vec4 p2_mvp) {
+
     float w1 = p1_mvp[3];
     float w2 = p2_mvp[3];
 
     vec4 s_p1_mvp = p1_mvp / w1;
     vec4 s_p2_mvp = p2_mvp / w2;
 
-    vec2 line = s_p2_mvp.xy - s_p1_mvp.xy;
- 
+    vec2 line = normalize(s_p2_mvp.xy - s_p1_mvp.xy);
+
     vec2 line_p;
 
     float temp_line_x = line_p.x;
-    
+
     line_p.x = -line.y;
     line_p.y = line.x;
 
-    line_p = w1 * normalize(line_p) / (2 * grid_sz);
-    
+    line_p = line_thickness * w1 * line_p;
+
     p1_mvp.xy += line_p;
 
     return p1_mvp;
-    
+
 }
-</perpen_point>
+< / perpen_point>
 
 
 void main() {
 
     <is_even>
-    int v_id = gl_VertexID;
+        int v_id = gl_VertexID;
     int ins_id = gl_InstanceID;
     bool is_even = v_id % 2 == 0;
-    </is_even>
-    
-    int p1_index = index(v_id, ins_id);
+    < / is_even>
+
+        int p1_index = index(v_id, ins_id);
 
     vec3 p1 = line_point(v_id, ins_id);
     p1.yz = p1.zy;
 
     vec4 p1_mvp = MVP * vec4(p1, 1.0);
     vec3 p2 = line_point(v_id + 2, ins_id);
-  
+
 
     <line_if_else>
-    
-    if (is_even) {
-        gl_Position = p1_mvp;   
-    }
-    
-    else {
-        p2.yz = p2.zy;
-        vec4 p2_mvp = MVP * vec4(p2, 1.0);
 
-        gl_Position = perpen_point(p1_mvp,p2_mvp);
-       
-    }
+        if (is_even) {
+            gl_Position = p1_mvp;
+        }
+
+        else {
+            p2.yz = p2.zy;
+            vec4 p2_mvp = MVP * vec4(p2, 1.0);
+
+            gl_Position = perpen_point(p1_mvp, p2_mvp);
+
+        }
     < / line_if_else>
 
-    clr = color(height[p1_index]);
+        clr = color(height[p1_index]);
 
 }
 
-</  vertex>
+< / vertex>
 
 <fragment>
 #version 440 core
@@ -275,7 +278,7 @@ in vec3 clr;
 void main() {
 
     float b = 1;
-    FragColor = vec4(clr*0.75, b);
+    FragColor = vec4(clr * 0.75, b);
 }
 
 < / fragment>
@@ -302,25 +305,24 @@ void main() {
     <$is_even>;
     vec3 p1;
     p1.yz = ep1.zy;
-    
-    vec4 p1_mvp = MVP * vec4(p1, 1.0);
 
+    vec4 p1_mvp = MVP * vec4(p1, 1.0);
     vec3 p2 = ep2;
 
     <$line_if_else>;
 
-    clr = vec3(1,1,1);
-    
+    clr = vec3(1, 1, 1);
+
 }
 
-</vertex>
+< / vertex>
 
 
 <fragment>
 <$heightmap:fragment>
 < / fragment>
 
-</trial>
+< / trial>
 
 
 <debug>
@@ -340,16 +342,15 @@ const vec3 vertices[3] = vec3[3](
 void main() {
     <$is_even>;
 
-    gl_Position = MVP*vec4(vertices[v_id], 1);
+    gl_Position = MVP * vec4(vertices[v_id], 1);
     clr = vec3(1, 1, 1);
-    
+
 }
 
 < / vertex>
 
 <fragment>
 <$heightmap:fragment>
-</fragment>
+< / fragment>
 
-</debug>
-
+< / debug>
